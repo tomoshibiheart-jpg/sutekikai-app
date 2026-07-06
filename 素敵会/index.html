@@ -635,7 +635,7 @@ async function refreshMyPoints() {
 function renderMyQR() {
   $("#myqr").innerHTML = "";
   new QRCode($("#myqr"), {
-    text: JSON.stringify({ sutekikai: 1, id: me.id, name: me.name }),
+    text: JSON.stringify({ sutekikai: 1, id: me.id }),
     width: 190, height: 190, colorDark: "#17131c", colorLight: "#fdf8ee",
     correctLevel: QRCode.CorrectLevel.L,
   });
@@ -751,6 +751,9 @@ function pickOutcome() {
 
 async function handleScan(other) {
   if (other.id === me.id) return toast("それはあなた自身のQRです ✦");
+  if (!profileMap[other.id]) await loadProfiles();
+  const otherName = profileMap[other.id];
+  if (!otherName) return toast("このQRの持ち主が見つかりません", 4000);
 
   const { data: prev } = await sb.from("connections").select("id")
     .or(`and(scanner_id.eq.${me.id},scanned_id.eq.${other.id}),and(scanner_id.eq.${other.id},scanned_id.eq.${me.id})`)
@@ -770,7 +773,7 @@ async function handleScan(other) {
   await sb.from("connections").insert({
     scanner_id: me.id, scanned_id: other.id, outcome, detail,
   });
-  showConnectionResult(other.id, other.name, outcome, detail);
+  showConnectionResult(other.id, otherName, outcome, detail);
 }
 
 /* シグネチャ演出:双方に同じものが表示される */
