@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>素敵会</title>
+<meta name="theme-color" content="#17131c">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="素敵会">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  --bg:#17131c; --surface:#221c2a; --surface2:#2b2335;
+  --gold:#e4b862; --gold-bright:#f6d78d; --cream:#f2ead9;
+  --muted:#9d92a8; --ember:#c96f4a;
+  --line:rgba(228,184,98,.18);
+  --radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--cream);
+  font-family:"Zen Kaku Gothic New",-apple-system,sans-serif;
+  font-size:15px; line-height:1.7;
+  overscroll-behavior:none;
+}
+h1,h2,h3,.display{font-family:"Shippori Mincho",serif;font-weight:700;letter-spacing:.06em}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{
+  font-family:inherit;font-size:15px;color:var(--cream);
+  background:var(--surface2);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;width:100%;outline:none;
+}
+input:focus,textarea:focus,select:focus{border-color:var(--gold)}
+::placeholder{color:var(--muted)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--gold);color:#1d1710;font-weight:700;
+  border-radius:999px;padding:14px 28px;font-size:15px;
+  transition:transform .12s ease, opacity .12s;
+  width:100%;
+}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+.btn.small{padding:9px 18px;font-size:13px;width:auto}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+.screen{display:none;min-height:100dvh}
+.screen.active{display:block}
+
+/* ---------- onboarding ---------- */
+#onboarding{display:none;flex-direction:column;justify-content:center;padding:36px 28px calc(36px + env(safe-area-inset-bottom));min-height:100dvh;max-width:480px;margin:0 auto}
+#onboarding.active{display:flex}
+.brand-mark{font-size:44px;line-height:1.3;color:var(--gold);margin-bottom:8px;font-family:"Shippori Mincho",serif;font-weight:700}
+.brand-sub{color:var(--muted);font-size:13px;letter-spacing:.18em;margin-bottom:40px}
+.field-label{font-size:12px;color:var(--gold);letter-spacing:.12em;margin:16px 0 6px}
+.hint{font-size:12px;color:var(--muted);margin-top:16px}
+
+/* ---------- app frame ---------- */
+#app{display:none}
+#app.active{display:block}
+.page{display:none;padding:24px 20px calc(96px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+.page.active{display:block}
+.page-title{font-size:24px;color:var(--gold);margin-bottom:4px}
+.page-lead{font-size:12.5px;color:var(--muted);margin-bottom:22px}
+
+.tabbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  display:flex;justify-content:space-around;
+  background:rgba(23,19,28,.92);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);
+  padding:10px 4px calc(10px + env(safe-area-inset-bottom));
+}
+.tabbar button{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);font-size:10px;letter-spacing:.05em;
+}
+.tabbar button .ico{font-size:19px;line-height:1}
+.tabbar button.on{color:var(--gold)}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px;
+}
+
+/* ---------- connect ---------- */
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 20px}
+#myqr{background:#fdf8ee;padding:14px;border-radius:14px;box-shadow:0 0 40px rgba(228,184,98,.15)}
+#myqr img,#myqr canvas{display:block}
+.qr-name{font-size:17px}
+.points-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--gold);color:var(--gold-bright);
+  border-radius:999px;padding:4px 14px;font-size:13px;
+}
+.match-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.match-row:last-child{border-bottom:none}
+.match-name{font-size:15px;margin-bottom:5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  font-size:11.5px;padding:3px 11px;border-radius:999px;
+  border:1px solid var(--gold);color:var(--gold-bright);
+}
+
+#scanner-view{position:fixed;inset:0;background:#000;z-index:200;display:none;flex-direction:column}
+#scanner-view.active{display:flex}
+#qr-reader{flex:1;overflow:hidden}
+#qr-reader video{object-fit:cover}
+.scanner-bar{padding:16px 20px calc(16px + env(safe-area-inset-bottom));background:var(--bg);text-align:center}
+
+/* ---------- signature: connection overlay ---------- */
+#connect-overlay{
+  position:fixed;inset:0;z-index:300;display:none;
+  align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(13,10,17,.94);backdrop-filter:blur(8px);
+  padding:32px;text-align:center;
+}
+#connect-overlay.active{display:flex}
+.ripple{
+  position:absolute;width:120px;height:120px;border-radius:50%;
+  border:2px solid var(--gold);opacity:0;
+  animation:ripple 1.6s ease-out infinite;
+}
+.ripple:nth-child(2){animation-delay:.5s}
+.ripple:nth-child(3){animation-delay:1s}
+@keyframes ripple{
+  0%{transform:scale(.4);opacity:.8}
+  100%{transform:scale(4.2);opacity:0}
+}
+@media (prefers-reduced-motion:reduce){.ripple{animation:none;opacity:.25;transform:scale(2)}}
+.ov-spark{font-size:52px;margin-bottom:8px;filter:drop-shadow(0 0 18px rgba(246,215,141,.7))}
+.ov-title{font-size:22px;color:var(--gold-bright);margin-bottom:6px;position:relative;font-family:"Shippori Mincho",serif}
+.ov-names{font-size:14px;color:var(--muted);margin-bottom:20px;position:relative}
+.ov-body{
+  position:relative;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);padding:22px;max-width:400px;width:100%;
+  font-size:16px;line-height:1.9;
+}
+.ov-body .theme-text{font-family:"Shippori Mincho",serif;font-size:19px;color:var(--cream)}
+.ov-points{font-family:"Shippori Mincho",serif;font-size:44px;color:var(--gold-bright)}
+.ov-actions{margin-top:22px;width:100%;max-width:400px;position:relative;display:flex;flex-direction:column;gap:10px}
+
+/* ---------- bingo ---------- */
+.bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:14px}
+.bingo-cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--line);border-radius:10px;
+  font-family:"Shippori Mincho",serif;font-size:17px;color:var(--cream);
+  transition:all .25s;
+}
+.bingo-cell.hit{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
+.bingo-cell.free{font-size:11px;letter-spacing:.05em}
+.drawn-strip{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.drawn-num{
+  width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--line);font-size:13px;
+  font-family:"Shippori Mincho",serif;
+}
+.drawn-num.latest{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
+.host-num{font-family:"Shippori Mincho",serif;font-size:64px;text-align:center;color:var(--gold-bright);margin:8px 0}
+.winner-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.winner-row:last-child{border-bottom:none}
+.rank-badge{color:var(--gold);font-family:"Shippori Mincho",serif}
+
+/* ---------- awards ---------- */
+.award-card{margin-bottom:14px;padding:16px;background:var(--surface2);border:1px solid var(--line);border-radius:12px}
+.award-title{font-family:"Shippori Mincho",serif;font-size:17px;color:var(--gold-bright);margin-bottom:10px}
+.award-result-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.award-result-row:last-child{border-bottom:none}
+.award-winner{color:var(--gold-bright);font-weight:700}
+.voted-note{font-size:12px;color:var(--muted);margin-top:8px}
+
+/* ---------- tag picker ---------- */
+.tag-picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.tag-opt{
+  padding:7px 14px;border-radius:999px;font-size:13px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--muted);
+}
+.tag-opt.sel{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
+
+/* ---------- song suggest ---------- */
+.song-wrap{position:relative}
+#song-suggest{
+  position:absolute;left:0;right:0;top:100%;z-index:60;display:none;
+  background:var(--surface2);border:1px solid var(--gold);border-radius:12px;
+  margin-top:4px;overflow:hidden;
+}
+#song-suggest .sg{padding:10px 14px;font-size:13.5px;border-bottom:1px solid var(--line);cursor:pointer}
+#song-suggest .sg:last-child{border-bottom:none}
+#song-suggest .sg-artist{color:var(--muted);font-size:12px}
+
+/* ---------- personal awards ---------- */
+.paward{
+  border:1px solid var(--gold);border-radius:14px;padding:16px;margin-bottom:10px;
+  background:linear-gradient(180deg,rgba(228,184,98,.10),rgba(228,184,98,.02));
+}
+.paward-title{font-family:"Shippori Mincho",serif;font-size:17px;color:var(--gold-bright);line-height:1.5}
+.paward-from{font-size:12px;color:var(--muted);margin-top:5px}
+.paward-comment{font-size:14px;margin-top:6px;white-space:pre-wrap}
+.assign-chip{
+  display:inline-flex;align-items:center;gap:6px;margin:4px 6px 4px 0;
+  border:1px dashed var(--gold);color:var(--gold-bright);
+  border-radius:999px;padding:6px 14px;font-size:13px;background:none;
+}
+.assign-chip.done{opacity:.4;border-style:solid;text-decoration:line-through}
+
+/* ---------- album ---------- */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
+.photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:var(--surface2)}
+#lightbox{
+  position:fixed;inset:0;z-index:350;display:none;align-items:center;justify-content:center;
+  background:rgba(13,10,17,.96);padding:20px;flex-direction:column;gap:16px;
+}
+#lightbox.active{display:flex}
+#lightbox img{max-width:100%;max-height:78dvh;border-radius:12px}
+#lightbox .lb-meta{color:var(--muted);font-size:12.5px}
+
+/* ---------- events ---------- */
+.event-title{font-family:"Shippori Mincho",serif;font-size:18px;color:var(--gold-bright)}
+.event-meta{font-size:13px;color:var(--muted);margin:4px 0 8px}
+.rsvp-row{display:flex;gap:8px;margin-top:12px}
+.rsvp-btn{
+  flex:1;padding:10px 0;border-radius:12px;font-size:13.5px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--muted);
+}
+.rsvp-btn.sel{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
+.attendee-line{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+
+/* ---------- songs ---------- */
+.song-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.song-row:last-child{border-bottom:none}
+.song-info{flex:1;min-width:0}
+.song-title{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-sub{font-size:12px;color:var(--muted)}
+.song-row.played{opacity:.45}
+.song-row.played .song-title{text-decoration:line-through}
+.played-mark{color:var(--gold);font-size:13px;white-space:nowrap}
+
+/* ---------- notes ---------- */
+.note-item{padding:16px 0;border-bottom:1px solid var(--line)}
+.note-item:last-child{border-bottom:none}
+.note-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;color:var(--muted)}
+.kind-tag{
+  font-size:10.5px;padding:2px 9px;border-radius:999px;letter-spacing:.08em;
+  border:1px solid var(--line);color:var(--gold);
+}
+.kind-tag.impression{color:var(--ember);border-color:rgba(201,111,74,.4)}
+.note-body{font-size:15px;white-space:pre-wrap}
+.empty{color:var(--muted);font-size:13.5px;text-align:center;padding:24px 0}
+
+/* ---------- me ---------- */
+.me-points{font-family:"Shippori Mincho",serif;font-size:52px;color:var(--gold-bright);line-height:1.2}
+.me-title-badge{
+  display:inline-block;margin-top:6px;border:1px solid var(--gold);color:var(--gold-bright);
+  border-radius:999px;padding:4px 16px;font-size:13px;font-family:"Shippori Mincho",serif;
+}
+.progress-track{height:6px;background:var(--surface2);border-radius:999px;margin-top:14px;overflow:hidden}
+.progress-fill{height:100%;background:var(--gold);border-radius:999px;transition:width .5s}
+.progress-label{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:right}
+.lb-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.lb-row:last-child{border-bottom:none}
+.lb-row .pt{margin-left:auto;color:var(--gold);font-family:"Shippori Mincho",serif}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--surface2);border:1px solid var(--gold);color:var(--cream);
+  padding:11px 22px;border-radius:999px;font-size:13.5px;z-index:400;
+  opacity:0;pointer-events:none;transition:all .3s;max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.divider{height:1px;background:var(--line);margin:20px 0}
+.section-h{font-size:13px;color:var(--gold);letter-spacing:.14em;margin:6px 0 10px}
+#setup-note{padding:40px 28px;max-width:520px;margin:0 auto;display:none}
+.host-badge{font-size:11px;color:var(--ember);letter-spacing:.1em;margin-bottom:14px;display:none}
+body.is-host .host-badge{display:block}
+</style>
+</head>
+<body>
+
+<!-- ======== 未設定ガイド ======== -->
+<div id="setup-note">
+  <h1 style="color:var(--gold);margin-bottom:16px">あと一歩です</h1>
+  <p style="font-size:14px;color:var(--muted)">index.html 上部の CONFIG に SupabaseのURLとanon keyを貼り付けてください。手順はREADME.mdの通りです。</p>
+</div>
+
+<!-- ======== オンボーディング ======== -->
+<div id="onboarding" class="screen">
+  <div class="brand-mark">素敵会</div>
+  <div class="brand-sub">SUTEKIKAI — 素敵な場所で、素敵な時間を。</div>
+  <div class="field-label">お名前(みんなに表示されます)</div>
+  <input id="ob-name" type="text" placeholder="例:くぐり" maxlength="20" autocomplete="off">
+  <div class="field-label">ひとこと(任意)</div>
+  <input id="ob-bio" type="text" placeholder="例:はじめまして!" maxlength="60" autocomplete="off">
+  <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
+  <div class="tag-picker" id="ob-tagpick"></div>
+  <input id="ob-tags" type="text" placeholder="その他があれば自由に(読点区切り)" maxlength="120" autocomplete="off" style="margin-top:10px">
+  <div class="field-label">自己紹介(任意・AIが共通点を見つける材料になります)</div>
+  <textarea id="ob-intro" rows="3" placeholder="例:大阪出身。普段は営業、週末は畑をやってます。最近ボードゲームにハマり中" maxlength="300"></textarea>
+  <div style="margin-top:26px"><button class="btn" id="ob-go">はじめる</button></div>
+  <p class="hint">ヒント:Safariの共有ボタン →「ホーム画面に追加」でアプリとして使えます。「好きなこと」を書くと、共通点のある参加者を見つけてくれます。</p>
+</div>
+
+<!-- ======== 本体 ======== -->
+<div id="app" class="screen">
+
+  <!-- つながる -->
+  <div class="page active" id="page-connect">
+    <h1 class="page-title">つながる</h1>
+    <p class="page-lead">お互いのQRを読み取ると、何かが起こります。</p>
+    <div class="card qr-wrap">
+      <div id="myqr"></div>
+      <div class="qr-name" id="my-name-label"></div>
+      <div class="points-pill">✦ <span id="my-points-label">0</span> 素敵ポイント</div>
+    </div>
+    <button class="btn" id="btn-scan">相手のQRを読み取る</button>
+    <div class="card" style="margin-top:16px">
+      <div class="section-h">AIが見つけた、あなたとの共通点</div>
+      <div id="ai-match-list"><p class="empty">読み込み中…</p></div>
+      <div id="host-match"></div>
+    </div>
+    <div class="card">
+      <div class="section-h">同じ「好きなこと」を持つ人</div>
+      <div id="match-list"><p class="empty">読み込み中…</p></div>
+    </div>
+  </div>
+
+  <!-- あそぶ(ビンゴ+投票) -->
+  <div class="page" id="page-play">
+    <h1 class="page-title">あそぶ</h1>
+    <p class="page-lead">ビンゴと、みんなで贈る「〇〇賞」。</p>
+    <div class="host-badge">主催者モード ON</div>
+    <div id="bingo-area"><p class="empty">読み込み中…</p></div>
+    <div id="host-bingo"></div>
+    <div class="divider"></div>
+    <div class="section-h" style="font-size:15px">みんなで贈る 〇〇賞</div>
+    <div id="awards-area"><p class="empty">読み込み中…</p></div>
+    <div id="host-awards"></div>
+    <div class="divider"></div>
+    <div class="section-h" style="font-size:15px">贈る賞 — あなたから、あの人へ</div>
+    <div id="pawards-area"><p class="empty">読み込み中…</p></div>
+    <div id="host-pawards"></div>
+  </div>
+
+  <!-- ひろば(アルバム+音楽) -->
+  <div class="page" id="page-plaza">
+    <h1 class="page-title">ひろば</h1>
+    <p class="page-lead">次の会のご案内、今日の思い出、今日の音楽。</p>
+    <div class="host-badge">主催者モード ON</div>
+    <div class="card">
+      <div class="section-h">素敵会のご案内</div>
+      <div id="events-area"><p class="empty">読み込み中…</p></div>
+      <div id="host-events"></div>
+    </div>
+    <div class="card">
+      <div class="section-h">みんなのアルバム</div>
+      <input type="file" id="photo-input" accept="image/*" style="display:none">
+      <button class="btn" id="btn-photo">写真を撮る・アップする</button>
+      <div class="photo-grid" id="photo-grid"></div>
+      <div style="margin-top:12px;text-align:center"><button class="btn ghost small" id="btn-photo-refresh">アルバムを更新</button></div>
+    </div>
+    <div class="card">
+      <div class="section-h">音楽リクエスト</div>
+      <div class="song-wrap">
+        <input id="song-title" type="text" placeholder="曲名(2文字で候補が出ます)" maxlength="60" autocomplete="off">
+        <div id="song-suggest"></div>
+      </div>
+      <input id="song-artist" type="text" placeholder="アーティスト(任意)" maxlength="60" style="margin-top:8px">
+      <div style="margin-top:12px"><button class="btn small" id="btn-song">リクエストする</button></div>
+      <div class="divider"></div>
+      <div id="song-list"><p class="empty">まだリクエストはありません</p></div>
+    </div>
+  </div>
+
+  <!-- ことば -->
+  <div class="page" id="page-notes">
+    <h1 class="page-title">ことばの貯金箱</h1>
+    <p class="page-lead">贈られたことばは残り続け、贈られた人には素敵ポイントが灯ります。</p>
+    <div class="card">
+      <div class="section-h">ことばを贈る</div>
+      <select id="note-to"></select>
+      <textarea id="note-body" rows="3" placeholder="感謝や想いをひとこと" style="margin-top:10px"></textarea>
+      <div style="margin-top:12px"><button class="btn small" id="btn-send-note">贈る</button></div>
+    </div>
+    <div class="card">
+      <div class="section-h">受け取ったことば</div>
+      <div id="notes-list"><p class="empty">まだありません。QRでつながってみましょう。</p></div>
+    </div>
+  </div>
+
+  <!-- わたし -->
+  <div class="page" id="page-me">
+    <h1 class="page-title">わたし</h1>
+    <div class="card" style="text-align:center">
+      <div style="font-size:12px;color:var(--muted);letter-spacing:.14em">素敵ポイント</div>
+      <div class="me-points" id="me-points">0</div>
+      <div class="me-title-badge" id="me-title">素敵のたね</div>
+      <div class="progress-track"><div class="progress-fill" id="me-progress" style="width:0%"></div></div>
+      <div class="progress-label" id="me-next"></div>
+    </div>
+    <div class="card">
+      <div class="section-h">プロフィール</div>
+      <div class="field-label">名前</div>
+      <input id="me-name" type="text" maxlength="20">
+      <div class="field-label">ひとこと</div>
+      <input id="me-bio" type="text" maxlength="60">
+      <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
+      <div class="tag-picker" id="me-tagpick"></div>
+      <input id="me-tags" type="text" maxlength="120" placeholder="その他があれば自由に(読点区切り)" style="margin-top:10px">
+      <div class="field-label">自己紹介(AIマッチングの材料になります)</div>
+      <textarea id="me-intro" rows="3" maxlength="300" placeholder="出身、仕事、最近ハマっていることなど自由に"></textarea>
+      <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
+    </div>
+    <div class="card">
+      <div class="section-h">もらった賞</div>
+      <div id="my-awards"><p class="empty">まだ賞はありません。会が終わると贈り合いが始まります。</p></div>
+    </div>
+    <div class="card">
+      <div class="section-h">素敵ポイント ランキング</div>
+      <div id="leaderboard"><p class="empty">読み込み中…</p></div>
+    </div>
+    <button class="btn ghost small" id="btn-host">主催者モード</button>
+    <div id="host-members"></div>
+  </div>
+
+  <nav class="tabbar">
+    <button data-page="connect" class="on"><span class="ico">✦</span>つながる</button>
+    <button data-page="play"><span class="ico">◉</span>あそぶ</button>
+    <button data-page="plaza"><span class="ico">▣</span>ひろば</button>
+    <button data-page="notes"><span class="ico">✉</span>ことば</button>
+    <button data-page="me"><span class="ico">☺</span>わたし</button>
+  </nav>
+</div>
+
+<!-- ======== スキャナー ======== -->
+<div id="scanner-view">
+  <div id="qr-reader"></div>
+  <div class="scanner-bar">
+    <button class="btn ghost" id="btn-scan-close" style="max-width:240px">とじる</button>
+  </div>
+</div>
+
+<!-- ======== つながり演出 ======== -->
+<div id="connect-overlay">
+  <div class="ripple"></div><div class="ripple"></div><div class="ripple"></div>
+  <div class="ov-spark">✦</div>
+  <div class="ov-title" id="ov-title"></div>
+  <div class="ov-names" id="ov-names"></div>
+  <div class="ov-body" id="ov-body"></div>
+  <div class="ov-actions" id="ov-actions"></div>
+</div>
+
+<!-- ======== 写真ビューア ======== -->
+<div id="lightbox">
+  <img id="lb-img" src="" alt="素敵会の写真">
+  <div class="lb-meta" id="lb-meta"></div>
+  <button class="btn ghost small" id="lb-close">とじる</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ================================================================
+   CONFIG — ここだけ書き換えれば動きます
+   ================================================================ */
+const CONFIG = {
+  SUPABASE_URL: "https://dtywrdijeqaysbjzynsa.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_H_1OxbbyJ7qYQbCS4EuCvw_09AxiYGL",   // ★ここだけ: sb_publishable_で始まるキーに置き換え
+  HOST_PIN: "0628",
+  GRATITUDE_POINTS: 3,                       // ことばを受け取った人に入るポイント
+};
+
+/* 興味タグの選択肢(自由に追加・変更OK) */
+const INTEREST_TAGS = [
+  "旅","サウナ","読書","映画","音楽","ライブ・フェス","スポーツ観戦","筋トレ",
+  "ランニング","キャンプ・アウトドア","料理","お酒","コーヒー・カフェ","グルメ",
+  "起業・ビジネス","投資・お金","アート・デザイン","写真","ゲーム","アニメ・漫画",
+  "ファッション","美容・健康","畑・自然","英語・語学","テクノロジー・AI","社会貢献",
+];
+
+/* 話すテーマ(自由に増やしてOK) */
+const THEMES = [
+  "最近、心が動いた瞬間の話",
+  "人生でいちばん美味しかったご飯の話",
+  "今年中に叶えたい、小さな夢",
+  "尊敬している大人の話",
+  "最近もらって嬉しかったことば",
+  "子どもの頃、夢中になっていたこと",
+  "行ってよかった場所を、ひとつだけ",
+  "自分の名前の由来や、気に入っているところ",
+  "最近はじめたこと・はじめたいこと",
+  "『素敵だな』と思う人の共通点",
+  "落ち込んだとき、自分を立て直す方法",
+  "5年後、どこで何をしていたい?",
+  "人生を変えた出会いの話",
+  "最近いちばん笑ったこと",
+  "お互いの第一印象を伝え合う",
+  "もし1年休みがもらえたら、何をする?",
+  "大切にしている口ぐせ・座右の銘",
+  "誰かにしてもらって忘れられないこと",
+  "今のあなたの『挑戦』の話",
+  "この素敵会で、話してみたかったこと",
+];
+const POINT_CHOICES = [5, 8, 13, 21];
+
+/* 素敵ポイントの称号(名前と必要ptは自由に変更OK。必ず小さい数字から順に) */
+const TITLES = [
+  [0,   "素敵なたね"],
+  [5,   "めばえ"],
+  [12,  "つぼみ"],
+  [20,  "一輪"],
+  [30,  "花束"],
+  [45,  "四つ葉"],
+  [60,  "花園"],
+  [80,  "陽だまり"],
+  [105, "木漏れ日"],
+  [135, "星あかり"],
+  [170, "月あかり"],
+  [215, "朝焼け"],
+  [270, "夕焼け"],
+  [340, "道しるべ"],
+  [420, "ともしび"],
+];
+
+/* ================================================================ */
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+let sb, me = null, profileMap = {}, allProfiles = [];
+let currentGame = null, myCard = null, hostMode = false;
+let awardsCache = [], myVotes = {};
+
+function toast(msg, ms = 2600) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), ms);
+}
+function esc(s){const d=document.createElement("div");d.textContent=s??"";return d.innerHTML;}
+function fmtDate(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;}
+function uuid(){ return (crypto.randomUUID) ? crypto.randomUUID() : "xxxxxxxxyxxx".replace(/[xy]/g,()=>Math.floor(Math.random()*16).toString(16)) + Date.now(); }
+function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); }
+function parseTags(s){ return (s||"").split(/[、,，\s]+/).map(t=>t.trim()).filter(Boolean); }
+function titleFor(p){
+  let cur = TITLES[0], next = null;
+  for (const t of TITLES) { if (p >= t[0]) cur = t; else { next = t; break; } }
+  return { cur, next };
+}
+
+/* ---------------- 起動 ---------------- */
+window.addEventListener("DOMContentLoaded", init);
+async function init() {
+  if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch(e){} }
+  if (CONFIG.SUPABASE_URL.startsWith("YOUR")) { $("#setup-note").style.display = "block"; return; }
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+
+  const uid = localStorage.getItem("sutekikai_uid");
+  if (uid) {
+    const { data } = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+    if (data) { me = data; return enterApp(); }
+    localStorage.removeItem("sutekikai_uid");
+  }
+  $("#onboarding").classList.add("active");
+  buildTagPicker("ob-tagpick", []);
+  $("#ob-go").addEventListener("click", async () => {
+    const name = $("#ob-name").value.trim();
+    if (!name) return toast("お名前を入れてください");
+    const { data, error } = await sb.from("profiles")
+      .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"), intro: $("#ob-intro").value.trim() })
+      .select().single();
+    if (error) return toast("登録に失敗しました。通信環境を確認してください");
+    me = data; localStorage.setItem("sutekikai_uid", me.id);
+    $("#onboarding").classList.remove("active");
+    enterApp();
+  });
+}
+
+async function enterApp() {
+  $("#app").classList.add("active");
+  renderMyQR(); renderMe();
+  await loadProfiles();
+  renderMatches();
+  await Promise.all([loadNotes(), loadBingo(), loadAwards(), loadPhotos(), loadSongs(), loadLeaderboard(), loadAiMatches(), loadEvents()]);
+  subscribeRealtime();
+  setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost();
+  setupAwards(); setupPhotos(); setupSongs();
+}
+
+function setupTabs() {
+  $$(".tabbar button").forEach(b => b.addEventListener("click", () => {
+    $$(".tabbar button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    $$(".page").forEach(p => p.classList.remove("active"));
+    $("#page-" + b.dataset.page).classList.add("active");
+    // タブを開いたときに軽く更新
+    if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
+    if (b.dataset.page === "play") { loadAwards(); loadPersonalAwards(); }
+    if (b.dataset.page === "me") { loadLeaderboard(); refreshMyPoints(); }
+    if (b.dataset.page === "connect") { loadProfiles().then(renderMatches); loadAiMatches(); }
+  }));
+}
+
+async function loadProfiles() {
+  const { data } = await sb.from("profiles").select("id,name,tags");
+  allProfiles = data || [];
+  profileMap = {};
+  allProfiles.forEach(p => profileMap[p.id] = p.name);
+  const sel = $("#note-to");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">贈る相手を選ぶ</option>` +
+    allProfiles.filter(p => p.id !== me.id)
+      .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  sel.value = cur;
+}
+const nameOf = (id) => profileMap[id] || "参加者";
+
+async function refreshMyPoints() {
+  const { data } = await sb.from("profiles").select("points").eq("id", me.id).single();
+  if (!data) return;
+  const before = titleFor(me.points).cur[1];
+  me.points = data.points;
+  renderMyQR(); renderMe();
+  const after = titleFor(me.points).cur[1];
+  if (before !== after) toast(`称号が「${after}」になりました ✦`, 4000);
+}
+
+/* ---------------- つながる ---------------- */
+function renderMyQR() {
+  $("#myqr").innerHTML = "";
+  new QRCode($("#myqr"), {
+    text: JSON.stringify({ sutekikai: 1, id: me.id }),
+    width: 190, height: 190, colorDark: "#17131c", colorLight: "#fdf8ee",
+    correctLevel: QRCode.CorrectLevel.L,
+  });
+  $("#my-name-label").textContent = me.name;
+  $("#my-points-label").textContent = me.points;
+}
+
+/* 共通点マッチング(タグの一致で判定) */
+function renderMatches() {
+  const el = $("#match-list");
+  const mine = parseTags(me.tags).map(t => t.toLowerCase());
+  if (!mine.length) {
+    el.innerHTML = `<p class="empty">「わたし」タブで好きなこと・興味を登録すると、<br>共通点のある人がここに表示されます。</p>`;
+    return;
+  }
+  const matches = allProfiles
+    .filter(p => p.id !== me.id)
+    .map(p => {
+      const theirs = parseTags(p.tags);
+      const shared = theirs.filter(t => mine.includes(t.toLowerCase()));
+      return { p, shared };
+    })
+    .filter(m => m.shared.length > 0)
+    .sort((a, b) => b.shared.length - a.shared.length)
+    .slice(0, 10);
+  if (!matches.length) {
+    el.innerHTML = `<p class="empty">まだ共通点のある人が見つかりません。<br>参加者が増えると、ここに現れます。</p>`;
+    return;
+  }
+  el.innerHTML = matches.map(m => `
+    <div class="match-row">
+      <div class="match-name">${esc(m.p.name)}さん</div>
+      <div class="chips">${m.shared.map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>
+    </div>`).join("");
+}
+
+/* AIマッチング(Edge Function + Gemini 無料枠) */
+async function loadAiMatches() {
+  const { data } = await sb.from("ai_matches").select("*")
+    .or(`user_a.eq.${me.id},user_b.eq.${me.id}`);
+  const el = $("#ai-match-list");
+  if (!data || !data.length) {
+    el.innerHTML = `<p class="empty">まだマッチング結果がありません。<br>主催者がAIマッチングを実行すると、ここに表示されます。</p>`;
+  } else {
+    el.innerHTML = data.map(m => {
+      const other = m.user_a === me.id ? m.user_b : m.user_a;
+      return `<div class="match-row">
+        <div class="match-name">${esc(nameOf(other))}さん</div>
+        <div class="chips"><span class="chip">${esc(m.common)}</span></div>
+      </div>`;
+    }).join("");
+  }
+  renderHostMatch();
+}
+function renderHostMatch() {
+  const el = $("#host-match");
+  if (!hostMode) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="divider"></div>
+    <button class="btn small" id="btn-ai-match">主催者:AIマッチングを実行(全員分を更新)</button>
+    <p class="hint" style="margin-top:8px">参加登録が揃ったタイミングで押すのがおすすめです。10秒ほどかかります。</p>`;
+  $("#btn-ai-match").addEventListener("click", async () => {
+    toast("AIがマッチング中…(10秒ほど)", 9000);
+    try {
+      const r = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/ai-match`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const j = await r.json();
+      if (j.ok) { toast(`マッチング完了:${j.count}組 ✦`); await loadAiMatches(); }
+      else toast("マッチング失敗:" + (j.reason || j.error || "設定を確認してください"), 5000);
+    } catch (e) {
+      toast("Edge Functionに接続できません。READMEの手順を確認してください", 5000);
+    }
+  });
+}
+
+let scanner = null, scanning = false;
+function setupConnect() {
+  $("#btn-scan").addEventListener("click", startScan);
+  $("#btn-scan-close").addEventListener("click", stopScan);
+}
+async function startScan() {
+  $("#scanner-view").classList.add("active");
+  scanner = new Html5Qrcode("qr-reader");
+  scanning = true;
+  try {
+    await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 230 },
+      async (text) => {
+        if (!scanning) return;
+        let payload = null;
+        try { payload = JSON.parse(text); } catch(e){}
+        if (!payload || payload.sutekikai !== 1 || !payload.id) return;
+        scanning = false;
+        await stopScan();
+        handleScan(payload);
+      });
+  } catch (e) {
+    toast("カメラを起動できませんでした。Safariのカメラ許可を確認してください", 4000);
+    $("#scanner-view").classList.remove("active");
+  }
+}
+async function stopScan() {
+  scanning = false;
+  if (scanner) { try { await scanner.stop(); scanner.clear(); } catch(e){} scanner = null; }
+  $("#scanner-view").classList.remove("active");
+}
+
+function pickOutcome() {
+  const r = Math.random();
+  return r < 0.45 ? "theme" : r < 0.80 ? "points" : "impression";
+}
+
+async function handleScan(other) {
+  if (other.id === me.id) return toast("それはあなた自身のQRです ✦");
+  if (!profileMap[other.id]) await loadProfiles();
+  const otherName = profileMap[other.id];
+  if (!otherName) return toast("このQRの持ち主が見つかりません", 4000);
+
+  const { data: prev } = await sb.from("connections").select("id")
+    .or(`and(scanner_id.eq.${me.id},scanned_id.eq.${other.id}),and(scanner_id.eq.${other.id},scanned_id.eq.${me.id})`)
+    .gte("created_at", todayISO()).limit(1);
+  const already = prev && prev.length > 0;
+
+  let outcome = already ? "theme" : pickOutcome();
+  let detail = "";
+  if (outcome === "theme") detail = THEMES[Math.floor(Math.random() * THEMES.length)];
+  if (outcome === "points") {
+    const pts = POINT_CHOICES[Math.floor(Math.random() * POINT_CHOICES.length)];
+    detail = String(pts);
+    await sb.rpc("add_points", { uid: me.id, amt: pts });
+    await sb.rpc("add_points", { uid: other.id, amt: pts });
+    me.points += pts; renderMyQR(); renderMe();
+  }
+  await sb.from("connections").insert({
+    scanner_id: me.id, scanned_id: other.id, outcome, detail,
+  });
+  showConnectionResult(other.id, otherName, outcome, detail);
+}
+
+/* シグネチャ演出:双方に同じものが表示される */
+function showConnectionResult(otherId, otherName, outcome, detail) {
+  const ov = $("#connect-overlay");
+  const actions = $("#ov-actions");
+  $("#ov-names").textContent = `${me.name} ✦ ${otherName}`;
+  actions.innerHTML = "";
+
+  if (outcome === "theme") {
+    $("#ov-title").textContent = "ふたりへの、話のたね";
+    $("#ov-body").innerHTML = `<div class="theme-text">${esc(detail)}</div>`;
+    addClose(actions);
+  } else if (outcome === "points") {
+    $("#ov-title").textContent = "素敵ポイント、獲得";
+    $("#ov-body").innerHTML =
+      `<div class="ov-points">+${esc(detail)}</div><div style="font-size:13px;color:var(--muted)">ふたりに贈られました</div>`;
+    addClose(actions);
+  } else {
+    $("#ov-title").textContent = "お互いの印象を、ことばに";
+    $("#ov-body").innerHTML =
+      `<div style="font-size:14px;margin-bottom:12px">${esc(otherName)}さんの素敵なところを、ひとことで。<br>相手の貯金箱にずっと残ります。</div>
+       <textarea id="imp-text" rows="3" placeholder="例:笑顔につられて、こちらまで楽しくなりました"></textarea>`;
+    const send = document.createElement("button");
+    send.className = "btn"; send.textContent = "贈る";
+    send.addEventListener("click", async () => {
+      const body = $("#imp-text").value.trim();
+      if (!body) return toast("ひとことだけでも、ぜひ");
+      await sendNote(otherId, "impression", body);
+      ov.classList.remove("active");
+    });
+    actions.appendChild(send);
+    addClose(actions, "あとで");
+  }
+  ov.classList.add("active");
+}
+function addClose(parent, label = "とじる") {
+  const c = document.createElement("button");
+  c.className = "btn ghost"; c.textContent = label;
+  c.addEventListener("click", () => $("#connect-overlay").classList.remove("active"));
+  parent.appendChild(c);
+}
+
+/* ---------------- イベント(会のご案内・出欠・アンケート) ---------------- */
+const WD = ["日","月","火","水","木","金","土"];
+function fmtEventDate(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]}) ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;}
+let eventsCache = [], rsvpAll = {}, myRsvps = {}, mySurveys = {};
+
+async function loadEvents() {
+  const { data: evs } = await sb.from("events").select("*").order("starts_at", { ascending: true });
+  eventsCache = evs || [];
+  rsvpAll = {}; myRsvps = {}; mySurveys = {};
+  const ids = eventsCache.map(e => e.id);
+  if (ids.length) {
+    const { data: rs } = await sb.from("rsvps").select("event_id,user_id,answer").in("event_id", ids);
+    (rs || []).forEach(r => {
+      (rsvpAll[r.event_id] = rsvpAll[r.event_id] || []).push(r);
+      if (r.user_id === me.id) myRsvps[r.event_id] = r.answer;
+    });
+    const { data: svs } = await sb.from("surveys").select("event_id,body").eq("user_id", me.id).in("event_id", ids);
+    (svs || []).forEach(s => mySurveys[s.event_id] = s.body);
+  }
+  renderEvents();
+  if (hostMode) renderHostEvents();
+  loadPersonalAwards();
+}
+
+function renderEvents() {
+  const el = $("#events-area");
+  const upcoming = eventsCache.filter(e => e.status === "upcoming");
+  const surveyEvents = eventsCache.filter(e => e.status === "past" && e.survey_open);
+  if (!upcoming.length && !surveyEvents.length) {
+    el.innerHTML = `<p class="empty">予定されている会はまだありません。<br>次回のご案内をお楽しみに。</p>`;
+    return;
+  }
+  const ANS = { yes: "参加する", maybe: "未定", no: "欠席" };
+  let html = "";
+  upcoming.forEach(e => {
+    const rs = rsvpAll[e.id] || [];
+    const yes = rs.filter(r => r.answer === "yes");
+    const mine = myRsvps[e.id];
+    html += `<div class="award-card">
+      <div class="event-title">${esc(e.title)}</div>
+      <div class="event-meta">${e.starts_at ? fmtEventDate(e.starts_at) : "日時未定"}${e.venue ? ` ・ ${esc(e.venue)}` : ""}</div>
+      ${e.description ? `<div style="font-size:14px;white-space:pre-wrap">${esc(e.description)}</div>` : ""}
+      <div class="rsvp-row">
+        ${Object.keys(ANS).map(a => `<button class="rsvp-btn ${mine === a ? "sel" : ""}" data-ev="${e.id}" data-ans="${a}">${ANS[a]}</button>`).join("")}
+      </div>
+      <div class="attendee-line">参加 ${yes.length}人${yes.length ? `:${yes.slice(0, 12).map(r => esc(nameOf(r.user_id))).join("、")}${yes.length > 12 ? " ほか" : ""}` : ""}</div>
+    </div>`;
+  });
+  surveyEvents.forEach(e => {
+    const answered = mySurveys[e.id];
+    html += `<div class="award-card">
+      <div class="event-title">${esc(e.title)} — アンケート</div>
+      <div class="event-meta">感想・気づき・次回への要望を自由に。主催者にのみ届きます</div>
+      <textarea class="survey-text" data-ev="${e.id}" rows="3" placeholder="ご自由にどうぞ">${answered ? esc(answered) : ""}</textarea>
+      <div style="margin-top:10px"><button class="btn small survey-btn" data-ev="${e.id}">${answered ? "回答を更新する" : "回答する"}</button></div>
+    </div>`;
+  });
+  el.innerHTML = html;
+
+  $$(".rsvp-btn").forEach(b => b.addEventListener("click", async () => {
+    const { error } = await sb.from("rsvps").upsert(
+      { event_id: b.dataset.ev, user_id: me.id, answer: b.dataset.ans },
+      { onConflict: "event_id,user_id" });
+    if (error) return toast("登録に失敗しました");
+    toast("出欠を登録しました ✦");
+    await loadEvents();
+  }));
+  $$(".survey-btn").forEach(b => b.addEventListener("click", async () => {
+    const ta = document.querySelector(`.survey-text[data-ev="${b.dataset.ev}"]`);
+    const body = ta.value.trim();
+    if (!body) return toast("ひとことだけでも、ぜひ");
+    const { error } = await sb.from("surveys").upsert(
+      { event_id: b.dataset.ev, user_id: me.id, body },
+      { onConflict: "event_id,user_id" });
+    if (error) return toast("送信に失敗しました");
+    toast("アンケートを送りました。ありがとうございます ✦");
+    await loadEvents();
+  }));
+}
+
+async function renderHostEvents() {
+  const el = $("#host-events");
+  if (!hostMode) { el.innerHTML = ""; return; }
+  let surveyBlocks = "";
+  const surveyEvents = eventsCache.filter(e => e.survey_open);
+  if (surveyEvents.length) {
+    const { data: allSv } = await sb.from("surveys").select("*")
+      .in("event_id", surveyEvents.map(e => e.id)).order("created_at", { ascending: false });
+    surveyBlocks = surveyEvents.map(e => {
+      const list = (allSv || []).filter(s => s.event_id === e.id);
+      return `<div class="award-card" style="margin-top:12px">
+        <div class="award-title">「${esc(e.title)}」の回答(${list.length})</div>
+        ${list.length ? list.map(s => `
+          <div class="note-item">
+            <div class="note-meta"><span>${esc(nameOf(s.user_id))}さん</span><span>・${fmtDate(s.created_at)}</span></div>
+            <div class="note-body">${esc(s.body)}</div>
+          </div>`).join("") : `<p class="empty">まだ回答はありません</p>`}
+      </div>`;
+    }).join("");
+  }
+  el.innerHTML = `<div class="divider"></div>
+    <div class="section-h">主催者:会をつくる</div>
+    <input id="ev-title" placeholder="会の名前(例:第二回 素敵会)" maxlength="40">
+    <input id="ev-venue" placeholder="場所" maxlength="60" style="margin-top:8px">
+    <input id="ev-date" type="datetime-local" style="margin-top:8px">
+    <textarea id="ev-desc" rows="3" placeholder="ご案内文(自由に)" maxlength="600" style="margin-top:8px"></textarea>
+    <div style="margin-top:10px"><button class="btn small" id="btn-new-event">会をつくる</button></div>
+    ${eventsCache.filter(e => e.status === "upcoming").map(e => {
+      const rs = rsvpAll[e.id] || [];
+      const grp = a => rs.filter(r => r.answer === a).map(r => esc(nameOf(r.user_id))).join("、") || "—";
+      return `<div class="award-card" style="margin-top:12px">
+        <div class="award-title">${esc(e.title)}</div>
+        <div style="font-size:13px">参加:${grp("yes")}</div>
+        <div style="font-size:13px;color:var(--muted)">未定:${grp("maybe")}</div>
+        <div style="font-size:13px;color:var(--muted)">欠席:${grp("no")}</div>
+        <div style="margin-top:10px"><button class="btn ghost small end-event-btn" data-ev="${e.id}">会を終了してアンケートを開く</button></div>
+      </div>`;
+    }).join("")}
+    ${surveyBlocks}`;
+
+  $("#btn-new-event")?.addEventListener("click", async () => {
+    const title = $("#ev-title").value.trim();
+    if (!title) return toast("会の名前を入れてください");
+    const dateVal = $("#ev-date").value;
+    await sb.from("events").insert({
+      title,
+      venue: $("#ev-venue").value.trim(),
+      description: $("#ev-desc").value.trim(),
+      starts_at: dateVal ? new Date(dateVal).toISOString() : null,
+    });
+    toast("会をつくりました。全員に届きます ✦");
+    await loadEvents();
+  });
+  $$(".end-event-btn").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("この会を終了して、アンケートを開きますか?")) return;
+    await sb.from("events").update({ status: "past", survey_open: true }).eq("id", b.dataset.ev);
+    await loadEvents();
+  }));
+}
+
+/* ---------------- 贈る賞(参加者が自由につける〇〇賞) ---------------- */
+const AWARD_POINTS = 5;
+let myAssignments = [], receivedAwards = [];
+
+function awardEvent() {
+  const evs = eventsCache.filter(e => e.survey_open);
+  return evs.length ? evs[evs.length - 1] : null;   // 直近に終了した会
+}
+
+async function loadPersonalAwards() {
+  // もらった賞(全期間)
+  const { data: recv } = await sb.from("personal_awards").select("*")
+    .eq("to_id", me.id).order("created_at", { ascending: false });
+  receivedAwards = recv || [];
+  renderMyAwards();
+
+  const ev = awardEvent();
+  const area = $("#pawards-area");
+  if (!ev) {
+    myAssignments = [];
+    area.innerHTML = `<div class="card"><p class="empty">会が終わると、ここで賞を贈り合えます。<br>「〇〇で賞」を、あなたのことばで。</p></div>`;
+    if (hostMode) renderHostPawards();
+    return;
+  }
+  const { data: asg } = await sb.from("award_assignments").select("*")
+    .eq("event_id", ev.id).eq("giver_id", me.id);
+  myAssignments = asg || [];
+  const { data: sent } = await sb.from("personal_awards").select("to_id")
+    .eq("event_id", ev.id).eq("from_id", me.id);
+  const sentIds = new Set((sent || []).map(s => s.to_id));
+
+  area.innerHTML = `<div class="card">
+    <div style="font-size:13.5px;color:var(--muted);margin-bottom:10px">「${esc(ev.title)}」のふりかえり。ユーモアたっぷりの賞で、あの人を讃えよう。</div>
+    ${myAssignments.length ? `
+      <div style="font-size:12.5px;color:var(--gold);letter-spacing:.08em;margin-bottom:4px">あなたが賞を考える相手</div>
+      <div style="margin-bottom:12px">${myAssignments.map(a =>
+        `<button class="assign-chip ${a.done || sentIds.has(a.receiver_id) ? "done" : ""}" data-uid="${a.receiver_id}">✦ ${esc(nameOf(a.receiver_id))}さん</button>`).join("")}</div>` : ""}
+    <select id="paward-to">
+      <option value="">賞を贈る相手を選ぶ</option>
+      ${allProfiles.filter(p => p.id !== me.id).map(p =>
+        `<option value="${p.id}">${esc(p.name)}${sentIds.has(p.id) ? "(この会では贈り済み)" : ""}</option>`).join("")}
+    </select>
+    <input id="paward-title" type="text" maxlength="30" placeholder="賞の名前(例:場を一瞬であたためたで賞)" style="margin-top:8px">
+    <textarea id="paward-comment" rows="2" maxlength="200" placeholder="授与のことば(任意)" style="margin-top:8px"></textarea>
+    <div style="margin-top:12px"><button class="btn small" id="btn-paward">賞を贈る</button></div>
+  </div>`;
+
+  $$(".assign-chip").forEach(c => c.addEventListener("click", () => {
+    $("#paward-to").value = c.dataset.uid;
+    $("#paward-title").focus();
+  }));
+  $("#btn-paward").addEventListener("click", async () => {
+    const to = $("#paward-to").value;
+    const title = $("#paward-title").value.trim();
+    if (!to) return toast("贈る相手を選んでください");
+    if (!title) return toast("賞の名前を考えてみてください");
+    const { error } = await sb.from("personal_awards").insert({
+      event_id: ev.id, from_id: me.id, to_id: to,
+      title, comment: $("#paward-comment").value.trim(),
+    });
+    if (error) return toast("この会では、その方にすでに賞を贈っています");
+    await sb.rpc("add_points", { uid: to, amt: AWARD_POINTS });
+    await sb.from("award_assignments").update({ done: true })
+      .eq("event_id", ev.id).eq("giver_id", me.id).eq("receiver_id", to);
+    toast(`${nameOf(to)}さんに「${title}」を贈りました ✦`, 3500);
+    await loadPersonalAwards();
+  });
+  if (hostMode) renderHostPawards();
+}
+
+function renderMyAwards() {
+  const el = $("#my-awards");
+  if (!receivedAwards.length) {
+    el.innerHTML = `<p class="empty">まだ賞はありません。会が終わると贈り合いが始まります。</p>`;
+    return;
+  }
+  el.innerHTML = receivedAwards.map(a => `
+    <div class="paward">
+      <div class="paward-title">🏆 ${esc(a.title)}</div>
+      <div class="paward-from">${esc(nameOf(a.from_id))}さんより ・ ${fmtDate(a.created_at)}</div>
+      ${a.comment ? `<div class="paward-comment">${esc(a.comment)}</div>` : ""}
+    </div>`).join("");
+}
+
+async function renderHostPawards() {
+  const el = $("#host-pawards");
+  if (!hostMode) { el.innerHTML = ""; return; }
+  const ev = awardEvent();
+  if (!ev) { el.innerHTML = `<div class="card"><div class="section-h">主催者:贈る賞</div><p class="empty">会を終了すると、割り当てができるようになります</p></div>`; return; }
+
+  const { data: asgAll } = await sb.from("award_assignments").select("giver_id,receiver_id,done").eq("event_id", ev.id);
+  const { data: given } = await sb.from("personal_awards").select("to_id").eq("event_id", ev.id);
+  const receivedSet = new Set((given || []).map(g => g.to_id));
+  const nobody = allProfiles.filter(p => !receivedSet.has(p.id));
+
+  el.innerHTML = `<div class="card">
+    <div class="section-h">主催者:贈る賞</div>
+    ${(asgAll && asgAll.length)
+      ? `<p style="font-size:13.5px">割り当て済み:${asgAll.length}件(完了 ${asgAll.filter(a => a.done).length})</p>`
+      : `<button class="btn small" id="btn-assign">贈る相手を割り当てる(全員に行き渡ります)</button>
+         <p class="hint" style="margin-top:8px">全員がランダムに2人ずつ担当。誰も漏れない設計です。</p>`}
+    <div class="divider"></div>
+    <div class="section-h">まだ賞が届いていない人(${nobody.length})</div>
+    ${nobody.length ? `<p style="font-size:13.5px">${nobody.map(p => esc(p.name)).join("、")}</p>` : `<p class="empty">全員に賞が届いています ✦</p>`}
+  </div>`;
+
+  $("#btn-assign")?.addEventListener("click", async () => {
+    const ids = allProfiles.map(p => p.id);
+    if (ids.length < 2) return toast("参加者が2人未満です");
+    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    const n = ids.length;
+    const rows = [];
+    const shifts = n >= 3 ? [1, 2] : [1];   // 円環シフト:自分に当たらず全員が2つ受け取る
+    shifts.forEach(s => { for (let i = 0; i < n; i++) rows.push({ event_id: ev.id, giver_id: ids[i], receiver_id: ids[(i + s) % n] }); });
+    const { error } = await sb.from("award_assignments").upsert(rows, { onConflict: "event_id,giver_id,receiver_id", ignoreDuplicates: true });
+    if (error) return toast("割り当てに失敗しました");
+    toast(`割り当て完了:${rows.length}件。全員の画面に届きます ✦`, 3500);
+    await loadPersonalAwards();
+  });
+}
+
+/* ---------------- ことば(+感謝ポイント) ---------------- */
+async function sendNote(toId, kind, body) {
+  // 同じ相手への今日1通目だけポイント付与(連投稼ぎ防止)
+  const { data: prev } = await sb.from("notes").select("id")
+    .eq("from_id", me.id).eq("to_id", toId)
+    .gte("created_at", todayISO()).limit(1);
+  const { error } = await sb.from("notes").insert({ from_id: me.id, to_id: toId, kind, body });
+  if (error) { toast("送信に失敗しました"); return false; }
+  if (!(prev && prev.length)) {
+    await sb.rpc("add_points", { uid: toId, amt: CONFIG.GRATITUDE_POINTS });
+  }
+  toast(`${nameOf(toId)}さんに贈りました ✦`);
+  return true;
+}
+function setupNotes() {
+  $("#btn-send-note").addEventListener("click", async () => {
+    const to = $("#note-to").value, body = $("#note-body").value.trim();
+    if (!to) return toast("贈る相手を選んでください");
+    if (!body) return toast("ことばを入力してください");
+    const ok = await sendNote(to, "message", body);
+    if (ok) { $("#note-body").value = ""; $("#note-to").value = ""; }
+  });
+}
+async function loadNotes() {
+  const { data } = await sb.from("notes").select("*")
+    .eq("to_id", me.id).order("created_at", { ascending: false }).limit(200);
+  renderNotes(data || []);
+}
+function renderNotes(list) {
+  const el = $("#notes-list");
+  if (!list.length) { el.innerHTML = `<p class="empty">まだありません。QRでつながってみましょう。</p>`; return; }
+  el.innerHTML = list.map(n => `
+    <div class="note-item">
+      <div class="note-meta">
+        <span class="kind-tag ${n.kind === "impression" ? "impression" : ""}">${n.kind === "impression" ? "印象" : "ことば"}</span>
+        <span>${esc(nameOf(n.from_id))}さんより</span><span>・${fmtDate(n.created_at)}</span>
+      </div>
+      <div class="note-body">${esc(n.body)}</div>
+    </div>`).join("");
+}
+
+/* ---------------- ビンゴ ---------------- */
+function genCardNumbers() {
+  const nums = [];
+  const cols = [];
+  for (let c = 0; c < 5; c++) {
+    const pool = Array.from({ length: 15 }, (_, i) => c * 15 + i + 1);
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    cols.push(pool.slice(0, 5));
+  }
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) nums.push(cols[c][r]);
+  nums[12] = 0; // FREE
+  return nums;
+}
+async function loadBingo() {
+  const { data: games } = await sb.from("bingo_games").select("*")
+    .order("created_at", { ascending: false }).limit(1);
+  currentGame = (games && games[0]) || null;
+  if (currentGame && currentGame.status === "open") {
+    const { data: card } = await sb.from("bingo_cards").select("*")
+      .eq("game_id", currentGame.id).eq("user_id", me.id).maybeSingle();
+    if (card) myCard = card;
+    else {
+      const { data: nc } = await sb.from("bingo_cards")
+        .insert({ game_id: currentGame.id, user_id: me.id, numbers: genCardNumbers() })
+        .select().single();
+      myCard = nc;
+    }
+  } else myCard = null;
+  renderBingo();
+  if (hostMode) renderHostBingo();
+}
+function isHit(n) { return n === 0 || (currentGame?.drawn || []).includes(n); }
+function checkBingo() {
+  if (!myCard) return false;
+  const g = myCard.numbers;
+  const lines = [];
+  for (let r = 0; r < 5; r++) lines.push([0,1,2,3,4].map(c => g[r*5+c]));
+  for (let c = 0; c < 5; c++) lines.push([0,1,2,3,4].map(r => g[r*5+c]));
+  lines.push([0,6,12,18,24].map(i => g[i]));
+  lines.push([4,8,12,16,20].map(i => g[i]));
+  return lines.some(line => line.every(isHit));
+}
+function renderBingo() {
+  const area = $("#bingo-area");
+  if (!currentGame || currentGame.status !== "open") {
+    area.innerHTML = `<div class="card"><p class="empty">ビンゴはまだ始まっていません。<br>会が始まったら、ここにカードが届きます。</p></div>`;
+    return;
+  }
+  const drawn = currentGame.drawn || [];
+  const latest = drawn[drawn.length - 1];
+  area.innerHTML = `
+    <div class="card">
+      <div class="section-h">あなたのカード</div>
+      <div class="bingo-grid">
+        ${myCard.numbers.map(n => `<div class="bingo-cell ${isHit(n) ? "hit" : ""} ${n === 0 ? "free" : ""}">${n === 0 ? "FREE" : n}</div>`).join("")}
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-h">出た数字(${drawn.length})</div>
+      ${drawn.length ? `<div class="drawn-strip">${drawn.map(n => `<div class="drawn-num ${n === latest ? "latest" : ""}">${n}</div>`).join("")}</div>` : `<p class="empty">まだ数字は出ていません</p>`}
+    </div>`;
+}
+async function onGameUpdate(game) {
+  currentGame = game;
+  renderBingo();
+  if (hostMode) renderHostBingo();
+  if (myCard && !myCard.bingo_at && checkBingo()) {
+    const now = new Date().toISOString();
+    await sb.from("bingo_cards").update({ bingo_at: now }).eq("id", myCard.id);
+    myCard.bingo_at = now;
+    const { count } = await sb.from("bingo_cards")
+      .select("id", { count: "exact", head: true })
+      .eq("game_id", currentGame.id).not("bingo_at", "is", null).lte("bingo_at", now);
+    celebrateBingo(count || 1);
+  }
+}
+function celebrateBingo(order) {
+  const ov = $("#connect-overlay");
+  $("#ov-title").textContent = "ビンゴ!";
+  $("#ov-names").textContent = me.name;
+  $("#ov-body").innerHTML = `<div class="ov-points">${order}番目</div><div style="font-size:14px">主催者に画面を見せて、景品を受け取ってください ✦</div>`;
+  const a = $("#ov-actions"); a.innerHTML = ""; addClose(a, "やった!");
+  ov.classList.add("active");
+}
+
+async function renderHostBingo() {
+  const p = $("#host-bingo");
+  const open = currentGame && currentGame.status === "open";
+  let winnersHtml = "";
+  if (open) {
+    const { data: wins } = await sb.from("bingo_cards").select("user_id,bingo_at")
+      .eq("game_id", currentGame.id).not("bingo_at", "is", null)
+      .order("bingo_at", { ascending: true });
+    winnersHtml = (wins && wins.length)
+      ? wins.map((w, i) => `<div class="winner-row"><span><span class="rank-badge">${i + 1}</span> ${esc(nameOf(w.user_id))}</span><span style="color:var(--muted)">${fmtDate(w.bingo_at)}</span></div>`).join("")
+      : `<p class="empty">まだビンゴは出ていません</p>`;
+  }
+  const drawn = currentGame?.drawn || [];
+  p.innerHTML = open ? `
+    <div class="card">
+      <div class="section-h">主催者:ビンゴ進行</div>
+      <div class="host-num">${drawn.length ? drawn[drawn.length - 1] : "—"}</div>
+      <button class="btn" id="btn-draw" ${drawn.length >= 75 ? "disabled" : ""}>数字を引く(${drawn.length}/75)</button>
+      <div class="divider"></div>
+      <div class="section-h">ビンゴ達成順(景品配布用)</div>
+      ${winnersHtml}
+      <div class="divider"></div>
+      <button class="btn ghost small" id="btn-close-game">この回を終了する</button>
+    </div>` : `
+    <div class="card">
+      <div class="section-h">主催者:ビンゴ進行</div>
+      <p class="empty">開催中のビンゴはありません</p>
+      <button class="btn" id="btn-new-game">新しいビンゴを始める</button>
+    </div>`;
+
+  $("#btn-draw")?.addEventListener("click", async () => {
+    const pool = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !drawn.includes(n));
+    if (!pool.length) return;
+    const n = pool[Math.floor(Math.random() * pool.length)];
+    await sb.from("bingo_games").update({ drawn: [...drawn, n] }).eq("id", currentGame.id);
+  });
+  $("#btn-new-game")?.addEventListener("click", async () => {
+    if (currentGame) await sb.from("bingo_games").update({ status: "closed" }).eq("id", currentGame.id);
+    await sb.from("bingo_games").insert({ status: "open", drawn: [] });
+    await loadBingo();
+    toast("ビンゴを開始しました。参加者にはカードが自動で配られます");
+  });
+  $("#btn-close-game")?.addEventListener("click", async () => {
+    if (!confirm("この回のビンゴを終了しますか?")) return;
+    await sb.from("bingo_games").update({ status: "closed" }).eq("id", currentGame.id);
+    await loadBingo();
+  });
+}
+
+/* ---------------- 〇〇賞 投票 ---------------- */
+function setupAwards() { /* イベントはrender内で付与 */ }
+async function loadAwards() {
+  const { data: awards } = await sb.from("awards").select("*").order("created_at", { ascending: false });
+  awardsCache = awards || [];
+  const { data: mv } = await sb.from("votes").select("award_id,target_id").eq("voter_id", me.id);
+  myVotes = {};
+  (mv || []).forEach(v => myVotes[v.award_id] = v.target_id);
+  await renderAwards();
+  if (hostMode) renderHostAwards();
+}
+async function renderAwards() {
+  const el = $("#awards-area");
+  if (!awardsCache.length) {
+    el.innerHTML = `<div class="card"><p class="empty">〇〇賞はまだありません。<br>会の後半に登場するかも。</p></div>`;
+    return;
+  }
+  const revealedIds = awardsCache.filter(a => a.status === "revealed").map(a => a.id);
+  let tally = {};
+  if (revealedIds.length) {
+    const { data: vs } = await sb.from("votes").select("award_id,target_id").in("award_id", revealedIds);
+    (vs || []).forEach(v => {
+      tally[v.award_id] = tally[v.award_id] || {};
+      tally[v.award_id][v.target_id] = (tally[v.award_id][v.target_id] || 0) + 1;
+    });
+  }
+  el.innerHTML = `<div class="card">` + awardsCache.map(a => {
+    if (a.status === "revealed") {
+      const rows = Object.entries(tally[a.id] || {}).sort((x, y) => y[1] - x[1]).slice(0, 3);
+      const inner = rows.length
+        ? rows.map(([tid, c], i) => `<div class="award-result-row"><span class="${i === 0 ? "award-winner" : ""}"><span class="rank-badge">${i + 1}</span> ${esc(nameOf(tid))}${i === 0 ? " ✦" : ""}</span><span style="color:var(--muted)">${c}票</span></div>`).join("")
+        : `<p class="empty">投票はありませんでした</p>`;
+      return `<div class="award-card"><div class="award-title">${esc(a.title)} — 結果発表</div>${inner}</div>`;
+    }
+    const votedFor = myVotes[a.id];
+    return `<div class="award-card">
+      <div class="award-title">${esc(a.title)}</div>
+      <select data-award="${a.id}" class="vote-select">
+        <option value="">この賞を贈る人を選ぶ</option>
+        ${allProfiles.filter(p => p.id !== me.id).map(p => `<option value="${p.id}" ${votedFor === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}
+      </select>
+      <div style="margin-top:10px"><button class="btn small vote-btn" data-award="${a.id}">${votedFor ? "投票を変更する" : "投票する"}</button></div>
+      ${votedFor ? `<div class="voted-note">現在の投票先:${esc(nameOf(votedFor))}さん</div>` : ""}
+    </div>`;
+  }).join("") + `</div>`;
+
+  $$(".vote-btn").forEach(b => b.addEventListener("click", async () => {
+    const awardId = b.dataset.award;
+    const sel = document.querySelector(`.vote-select[data-award="${awardId}"]`);
+    const target = sel.value;
+    if (!target) return toast("贈る人を選んでください");
+    const { error } = await sb.from("votes").upsert(
+      { award_id: awardId, voter_id: me.id, target_id: target },
+      { onConflict: "award_id,voter_id" });
+    if (error) return toast("投票に失敗しました");
+    myVotes[awardId] = target;
+    toast(`「${nameOf(target)}さん」に投票しました ✦`);
+    renderAwards();
+  }));
+}
+async function renderHostAwards() {
+  const p = $("#host-awards");
+  p.innerHTML = `
+    <div class="card">
+      <div class="section-h">主催者:〇〇賞をつくる</div>
+      <input id="new-award-title" type="text" placeholder="例:いちばん笑わせてくれたで賞" maxlength="40">
+      <div style="margin-top:10px"><button class="btn small" id="btn-new-award">賞をつくる</button></div>
+      ${awardsCache.filter(a => a.status === "open").map(a => `
+        <div class="award-card" style="margin-top:12px">
+          <div class="award-title">${esc(a.title)}</div>
+          <button class="btn ghost small reveal-btn" data-award="${a.id}">結果を発表する</button>
+        </div>`).join("")}
+    </div>`;
+  $("#btn-new-award")?.addEventListener("click", async () => {
+    const title = $("#new-award-title").value.trim();
+    if (!title) return toast("賞の名前を入れてください");
+    await sb.from("awards").insert({ title, status: "open" });
+    $("#new-award-title").value = "";
+    toast("賞をつくりました。全員の画面に届きます ✦");
+    await loadAwards();
+  });
+  $$(".reveal-btn").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("結果を発表しますか?(全員に公開されます)")) return;
+    await sb.from("awards").update({ status: "revealed" }).eq("id", b.dataset.award);
+    await loadAwards();
+  }));
+}
+
+/* ---------------- アルバム ---------------- */
+function setupPhotos() {
+  $("#btn-photo").addEventListener("click", () => $("#photo-input").click());
+  $("#photo-input").addEventListener("change", onPhotoPicked);
+  $("#btn-photo-refresh").addEventListener("click", () => { loadPhotos(); toast("アルバムを更新しました"); });
+  $("#lb-close").addEventListener("click", () => $("#lightbox").classList.remove("active"));
+  $("#lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") $("#lightbox").classList.remove("active"); });
+}
+function loadImageFromFile(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => res({ img, url });
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+async function compressToJpeg(file, maxDim = 1600, quality = 0.8) {
+  const { img, url } = await loadImageFromFile(file);
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(url);
+  return new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+}
+async function onPhotoPicked(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  toast("アップロード中…", 6000);
+  try {
+    const blob = await compressToJpeg(file);
+    const path = `${uuid()}.jpg`;
+    const { error: upErr } = await sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" });
+    if (upErr) throw upErr;
+    await sb.from("photos").insert({ user_id: me.id, path });
+    toast("アルバムに追加しました ✦");
+    await loadPhotos();
+  } catch (err) {
+    toast("アップロードに失敗しました。通信環境を確認してください", 4000);
+  }
+}
+function photoUrl(path) {
+  return `${CONFIG.SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+}
+async function loadPhotos() {
+  const { data } = await sb.from("photos").select("*")
+    .order("created_at", { ascending: false }).limit(120);
+  const grid = $("#photo-grid");
+  if (!data || !data.length) { grid.innerHTML = `<p class="empty" style="grid-column:1/-1">まだ写真がありません。最初の一枚をぜひ。</p>`; return; }
+  grid.innerHTML = data.map(ph =>
+    `<img src="${photoUrl(ph.path)}" loading="lazy" alt="素敵会の写真"
+      data-path="${ph.path}" data-by="${esc(nameOf(ph.user_id))}" data-at="${ph.created_at}">`).join("");
+  grid.querySelectorAll("img").forEach(img => img.addEventListener("click", () => {
+    $("#lb-img").src = photoUrl(img.dataset.path);
+    $("#lb-meta").textContent = `${img.dataset.by}さん撮影 ・ ${fmtDate(img.dataset.at)}(長押しで保存できます)`;
+    $("#lightbox").classList.add("active");
+  }));
+}
+
+/* ---------------- 音楽リクエスト ---------------- */
+function jsonp(url) {
+  return new Promise((res, rej) => {
+    const cb = "itcb_" + Date.now() + Math.floor(Math.random() * 1000);
+    const s = document.createElement("script");
+    window[cb] = (d) => { res(d); delete window[cb]; s.remove(); };
+    s.src = url + "&callback=" + cb;
+    s.onerror = () => { rej(new Error("jsonp failed")); delete window[cb]; s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+let sgTimer = null, sgItems = [];
+function setupSongSuggest() {
+  const inp = $("#song-title"), box = $("#song-suggest");
+  inp.addEventListener("input", () => {
+    clearTimeout(sgTimer);
+    const q = inp.value.trim();
+    if (q.length < 2) { box.style.display = "none"; return; }
+    sgTimer = setTimeout(async () => {
+      try {
+        const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=JP&media=music&entity=song&limit=5&lang=ja_jp`);
+        sgItems = d.results || [];
+        if (!sgItems.length) { box.style.display = "none"; return; }
+        box.innerHTML = sgItems.map((r, i) =>
+          `<div class="sg" data-i="${i}"><div>${esc(r.trackName)}</div><div class="sg-artist">${esc(r.artistName)}</div></div>`).join("");
+        box.style.display = "block";
+        box.querySelectorAll(".sg").forEach(el => el.addEventListener("click", () => {
+          const r = sgItems[+el.dataset.i];
+          $("#song-title").value = r.trackName;
+          $("#song-artist").value = r.artistName;
+          box.style.display = "none";
+        }));
+      } catch (e) { box.style.display = "none"; }
+    }, 350);
+  });
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target) && e.target !== inp) box.style.display = "none";
+  });
+}
+function setupSongs() {
+  setupSongSuggest();
+  $("#btn-song").addEventListener("click", async () => {
+    const title = $("#song-title").value.trim();
+    if (!title) return toast("曲名を入れてください");
+    const artist = $("#song-artist").value.trim();
+    const { error } = await sb.from("song_requests").insert({ user_id: me.id, title, artist });
+    if (error) return toast("リクエストに失敗しました");
+    $("#song-title").value = ""; $("#song-artist").value = "";
+    toast("リクエストしました ♪ 会場で流れるのを楽しみに");
+    await loadSongs();
+  });
+}
+async function loadSongs() {
+  const { data } = await sb.from("song_requests").select("*")
+    .order("created_at", { ascending: false }).limit(100);
+  const el = $("#song-list");
+  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだリクエストはありません</p>`; return; }
+  el.innerHTML = data.map(s => `
+    <div class="song-row ${s.status === "played" ? "played" : ""}">
+      <div class="song-info">
+        <div class="song-title">${esc(s.title)}${s.artist ? ` <span style="color:var(--muted)">/ ${esc(s.artist)}</span>` : ""}</div>
+        <div class="song-sub">${esc(nameOf(s.user_id))}さんのリクエスト</div>
+      </div>
+      ${s.status === "played"
+        ? `<span class="played-mark">流れました ♪</span>`
+        : (hostMode ? `<button class="btn ghost small song-played-btn" data-id="${s.id}">流した</button>` : "")}
+    </div>`).join("");
+  $$(".song-played-btn").forEach(b => b.addEventListener("click", async () => {
+    await sb.from("song_requests").update({ status: "played" }).eq("id", b.dataset.id);
+    await loadSongs();
+  }));
+}
+
+/* ---------------- わたし ---------------- */
+function renderMe() {
+  $("#me-points").textContent = me.points;
+  $("#me-name").value = me.name;
+  $("#me-bio").value = me.bio || "";
+  const curTags = parseTags(me.tags);
+  buildTagPicker("me-tagpick", curTags);
+  $("#me-tags").value = curTags.filter(t => !INTEREST_TAGS.includes(t)).join("、");
+  $("#me-intro").value = me.intro || "";
+  const { cur, next } = titleFor(me.points);
+  $("#me-title").textContent = cur[1];
+  if (next) {
+    const span = next[0] - cur[0];
+    const pct = Math.min(100, Math.round(((me.points - cur[0]) / span) * 100));
+    $("#me-progress").style.width = pct + "%";
+    $("#me-next").textContent = `あと${next[0] - me.points}ptで「${next[1]}」`;
+  } else {
+    $("#me-progress").style.width = "100%";
+    $("#me-next").textContent = "最高称号です ✦";
+  }
+}
+function setupMe() {
+  $("#btn-save-me").addEventListener("click", async () => {
+    const name = $("#me-name").value.trim();
+    if (!name) return toast("名前は必須です");
+    const bio = $("#me-bio").value.trim();
+    const tags = combineTags("me-tagpick", "me-tags");
+    const intro = $("#me-intro").value.trim();
+    const { error } = await sb.from("profiles").update({ name, bio, tags, intro }).eq("id", me.id);
+    if (error) return toast("保存に失敗しました");
+    me.name = name; me.bio = bio; me.tags = tags; me.intro = intro;
+    renderMyQR(); await loadProfiles(); renderMatches();
+    toast("保存しました ✦");
+  });
+}
+function setupHost() {
+  $("#btn-host").addEventListener("click", () => {
+    if (hostMode) {
+      hostMode = false;
+      document.body.classList.remove("is-host");
+      $("#host-bingo").innerHTML = ""; $("#host-awards").innerHTML = ""; $("#host-match").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-pawards").innerHTML = ""; $("#host-members").innerHTML = "";
+      loadSongs();
+      return toast("主催者モードを終了しました");
+    }
+    const pin = prompt("主催者PINを入力");
+    if (pin !== CONFIG.HOST_PIN) { if (pin !== null) toast("PINが違います"); return; }
+    hostMode = true;
+    document.body.classList.add("is-host");
+    renderHostBingo(); renderHostAwards(); renderHostMatch(); renderHostEvents(); renderHostPawards(); renderHostMembers(); loadSongs();
+    toast("主催者モードON:あそぶ・ひろばに進行パネルが出ています");
+  });
+}
+async function renderHostMembers() {
+  const el = $("#host-members");
+  if (!hostMode) { el.innerHTML = ""; return; }
+  const { data } = await sb.from("profiles").select("id,name,points,created_at")
+    .order("created_at", { ascending: true });
+  el.innerHTML = `<div class="card" style="margin-top:16px">
+    <div class="section-h">主催者:参加者の管理</div>
+    ${(data || []).map(p => `
+      <div class="lb-row">
+        <span>${esc(p.name)}${p.id === me.id ? "(あなた)" : ""}</span>
+        <span style="color:var(--muted);font-size:12px">${p.points}pt</span>
+        ${p.id === me.id ? "" : `<button class="btn ghost small del-member" data-id="${p.id}" data-name="${esc(p.name)}" style="margin-left:auto">削除</button>`}
+      </div>`).join("")}
+    <p class="hint">削除するとその人のことば・写真・賞など全記録が消えます(テストアカウント整理用)。</p>
+  </div>`;
+  el.querySelectorAll(".del-member").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`「${b.dataset.name}」を完全に削除しますか?\nこの人に関する記録もすべて消えます。元に戻せません。`)) return;
+    const { error } = await sb.from("profiles").delete().eq("id", b.dataset.id);
+    if (error) return toast("削除に失敗しました");
+    toast(`「${b.dataset.name}」を削除しました`);
+    await loadProfiles(); renderMatches();
+    await Promise.all([loadLeaderboard(), loadAiMatches(), loadEvents()]);
+    renderHostMembers();
+  }));
+}
+async function loadLeaderboard() {
+  const { data } = await sb.from("profiles").select("id,name,points")
+    .order("points", { ascending: false }).limit(10);
+  const el = $("#leaderboard");
+  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ誰もいません</p>`; return; }
+  el.innerHTML = data.map((p, i) => `
+    <div class="lb-row">
+      <span class="rank-badge">${i + 1}</span>
+      <span>${esc(p.name)}${p.id === me.id ? " (あなた)" : ""}</span>
+      <span class="pt">${p.points}</span>
+    </div>`).join("");
+}
+
+/* ---------------- リアルタイム ---------------- */
+function subscribeRealtime() {
+  sb.channel("conn-in")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "connections", filter: `scanned_id=eq.${me.id}` },
+      async (payload) => {
+        const c = payload.new;
+        if (!profileMap[c.scanner_id]) await loadProfiles();
+        if (c.outcome === "points") await refreshMyPoints();
+        showConnectionResult(c.scanner_id, nameOf(c.scanner_id), c.outcome, c.detail);
+      })
+    .subscribe();
+
+  sb.channel("notes-in")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "notes", filter: `to_id=eq.${me.id}` },
+      async (payload) => {
+        if (!profileMap[payload.new.from_id]) await loadProfiles();
+        toast(`${nameOf(payload.new.from_id)}さんから、ことばが届きました ✦`, 3500);
+        await loadNotes();
+        await refreshMyPoints();
+      })
+    .subscribe();
+
+  sb.channel("bingo-live")
+    .on("postgres_changes",
+      { event: "UPDATE", schema: "public", table: "bingo_games" },
+      (payload) => { if (currentGame && payload.new.id === currentGame.id) onGameUpdate(payload.new); })
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "bingo_games" },
+      () => loadBingo())
+    .subscribe();
+
+  sb.channel("awards-live")
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "awards" },
+      () => loadAwards())
+    .subscribe();
+
+  sb.channel("pawards-in")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "personal_awards", filter: `to_id=eq.${me.id}` },
+      async (payload) => {
+        if (!profileMap[payload.new.from_id]) await loadProfiles();
+        toast(`${nameOf(payload.new.from_id)}さんから「${payload.new.title}」が届きました 🏆`, 4500);
+        await loadPersonalAwards();
+        await refreshMyPoints();
+      })
+    .subscribe();
+
+  sb.channel("events-live")
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "events" },
+      () => loadEvents())
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "rsvps" },
+      () => loadEvents())
+    .subscribe();
+
+  sb.channel("songs-live")
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "song_requests" },
+      () => loadSongs())
+    .subscribe();
+}
+</script>
+</body>
+</html>
