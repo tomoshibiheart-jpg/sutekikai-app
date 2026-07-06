@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="素敵会">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -179,6 +180,25 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .award-winner{color:var(--gold-bright);font-weight:700}
 .voted-note{font-size:12px;color:var(--muted);margin-top:8px}
 
+/* ---------- tag picker ---------- */
+.tag-picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.tag-opt{
+  padding:7px 14px;border-radius:999px;font-size:13px;
+  background:var(--surface2);border:1px solid var(--line);color:var(--muted);
+}
+.tag-opt.sel{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
+
+/* ---------- song suggest ---------- */
+.song-wrap{position:relative}
+#song-suggest{
+  position:absolute;left:0;right:0;top:100%;z-index:60;display:none;
+  background:var(--surface2);border:1px solid var(--gold);border-radius:12px;
+  margin-top:4px;overflow:hidden;
+}
+#song-suggest .sg{padding:10px 14px;font-size:13.5px;border-bottom:1px solid var(--line);cursor:pointer}
+#song-suggest .sg:last-child{border-bottom:none}
+#song-suggest .sg-artist{color:var(--muted);font-size:12px}
+
 /* ---------- personal awards ---------- */
 .paward{
   border:1px solid var(--gold);border-radius:14px;padding:16px;margin-bottom:10px;
@@ -283,8 +303,9 @@ body.is-host .host-badge{display:block}
   <input id="ob-name" type="text" placeholder="例:くぐり" maxlength="20" autocomplete="off">
   <div class="field-label">ひとこと(任意)</div>
   <input id="ob-bio" type="text" placeholder="例:はじめまして!" maxlength="60" autocomplete="off">
-  <div class="field-label">好きなこと・興味(読点や,で区切って)</div>
-  <input id="ob-tags" type="text" placeholder="例:サウナ、旅、コーヒー、起業" maxlength="120" autocomplete="off">
+  <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
+  <div class="tag-picker" id="ob-tagpick"></div>
+  <input id="ob-tags" type="text" placeholder="その他があれば自由に(読点区切り)" maxlength="120" autocomplete="off" style="margin-top:10px">
   <div class="field-label">自己紹介(任意・AIが共通点を見つける材料になります)</div>
   <textarea id="ob-intro" rows="3" placeholder="例:大阪出身。普段は営業、週末は畑をやってます。最近ボードゲームにハマり中" maxlength="300"></textarea>
   <div style="margin-top:26px"><button class="btn" id="ob-go">はじめる</button></div>
@@ -351,7 +372,10 @@ body.is-host .host-badge{display:block}
     </div>
     <div class="card">
       <div class="section-h">音楽リクエスト</div>
-      <input id="song-title" type="text" placeholder="曲名" maxlength="60">
+      <div class="song-wrap">
+        <input id="song-title" type="text" placeholder="曲名(2文字で候補が出ます)" maxlength="60" autocomplete="off">
+        <div id="song-suggest"></div>
+      </div>
       <input id="song-artist" type="text" placeholder="アーティスト(任意)" maxlength="60" style="margin-top:8px">
       <div style="margin-top:12px"><button class="btn small" id="btn-song">リクエストする</button></div>
       <div class="divider"></div>
@@ -391,8 +415,9 @@ body.is-host .host-badge{display:block}
       <input id="me-name" type="text" maxlength="20">
       <div class="field-label">ひとこと</div>
       <input id="me-bio" type="text" maxlength="60">
-      <div class="field-label">好きなこと・興味(読点や,で区切って)</div>
-      <input id="me-tags" type="text" maxlength="120" placeholder="例:サウナ、旅、コーヒー">
+      <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
+      <div class="tag-picker" id="me-tagpick"></div>
+      <input id="me-tags" type="text" maxlength="120" placeholder="その他があれば自由に(読点区切り)" style="margin-top:10px">
       <div class="field-label">自己紹介(AIマッチングの材料になります)</div>
       <textarea id="me-intro" rows="3" maxlength="300" placeholder="出身、仕事、最近ハマっていることなど自由に"></textarea>
       <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
@@ -406,6 +431,7 @@ body.is-host .host-badge{display:block}
       <div id="leaderboard"><p class="empty">読み込み中…</p></div>
     </div>
     <button class="btn ghost small" id="btn-host">主催者モード</button>
+    <div id="host-members"></div>
   </div>
 
   <nav class="tabbar">
@@ -449,11 +475,19 @@ body.is-host .host-badge{display:block}
    CONFIG — ここだけ書き換えれば動きます
    ================================================================ */
 const CONFIG = {
-  SUPABASE_URL: "https://dtywrdijeqaysbjzynsa.supabase.co",        // 例: https://xxxx.supabase.co
-  SUPABASE_ANON_KEY: "sb_publishable_H_1OxbbyJ7qYQbCS4EuCvw_09AxiYGL",
-  HOST_PIN: "0628",                          // 主催者用PIN(変更推奨)
+  SUPABASE_URL: "https://dtywrdijeqaysbjzynsa.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_H_1OxbbyJ7qYQbCS4EuCvw_09AxiYGL",   // ★ここだけ: sb_publishable_で始まるキーに置き換え
+  HOST_PIN: "0628",
   GRATITUDE_POINTS: 3,                       // ことばを受け取った人に入るポイント
 };
+
+/* 興味タグの選択肢(自由に追加・変更OK) */
+const INTEREST_TAGS = [
+  "旅","サウナ","読書","映画","音楽","ライブ・フェス","スポーツ観戦","筋トレ",
+  "ランニング","キャンプ・アウトドア","料理","お酒","コーヒー・カフェ","グルメ",
+  "起業・ビジネス","投資・お金","アート・デザイン","写真","ゲーム","アニメ・漫画",
+  "ファッション","美容・健康","畑・自然","英語・語学","テクノロジー・AI","社会貢献",
+];
 
 /* 話すテーマ(自由に増やしてOK) */
 const THEMES = [
@@ -480,13 +514,23 @@ const THEMES = [
 ];
 const POINT_CHOICES = [5, 8, 13, 21];
 
-/* 素敵ポイントの称号(表彰・景品の基準に。自由に変更を) */
+/* 素敵ポイントの称号(名前と必要ptは自由に変更OK。必ず小さい数字から順に) */
 const TITLES = [
-  [0,   "素敵のたね"],
-  [30,  "素敵のつぼみ"],
-  [60,  "素敵な人"],
-  [120, "素敵の灯し手"],
-  [250, "素敵マスター"],
+  [0,   "素敵なたね"],
+  [5,   "めばえ"],
+  [12,  "つぼみ"],
+  [20,  "一輪"],
+  [30,  "花束"],
+  [45,  "四つ葉"],
+  [60,  "花園"],
+  [80,  "陽だまり"],
+  [105, "木漏れ日"],
+  [135, "星あかり"],
+  [170, "月あかり"],
+  [215, "朝焼け"],
+  [270, "夕焼け"],
+  [340, "道しるべ"],
+  [420, "ともしび"],
 ];
 
 /* ================================================================ */
@@ -525,11 +569,12 @@ async function init() {
     localStorage.removeItem("sutekikai_uid");
   }
   $("#onboarding").classList.add("active");
+  buildTagPicker("ob-tagpick", []);
   $("#ob-go").addEventListener("click", async () => {
     const name = $("#ob-name").value.trim();
     if (!name) return toast("お名前を入れてください");
     const { data, error } = await sb.from("profiles")
-      .insert({ name, bio: $("#ob-bio").value.trim(), tags: $("#ob-tags").value.trim(), intro: $("#ob-intro").value.trim() })
+      .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"), intro: $("#ob-intro").value.trim() })
       .select().single();
     if (error) return toast("登録に失敗しました。通信環境を確認してください");
     me = data; localStorage.setItem("sutekikai_uid", me.id);
@@ -591,9 +636,9 @@ async function refreshMyPoints() {
 function renderMyQR() {
   $("#myqr").innerHTML = "";
   new QRCode($("#myqr"), {
-    text: JSON.stringify({ sutekikai: 1, id: me.id, name: me.name }),
+    text: JSON.stringify({ sutekikai: 1, id: me.id }),
     width: 190, height: 190, colorDark: "#17131c", colorLight: "#fdf8ee",
-    correctLevel: QRCode.CorrectLevel.M,
+    correctLevel: QRCode.CorrectLevel.L,
   });
   $("#my-name-label").textContent = me.name;
   $("#my-points-label").textContent = me.points;
@@ -707,6 +752,9 @@ function pickOutcome() {
 
 async function handleScan(other) {
   if (other.id === me.id) return toast("それはあなた自身のQRです ✦");
+  if (!profileMap[other.id]) await loadProfiles();
+  const otherName = profileMap[other.id];
+  if (!otherName) return toast("このQRの持ち主が見つかりません", 4000);
 
   const { data: prev } = await sb.from("connections").select("id")
     .or(`and(scanner_id.eq.${me.id},scanned_id.eq.${other.id}),and(scanner_id.eq.${other.id},scanned_id.eq.${me.id})`)
@@ -726,7 +774,7 @@ async function handleScan(other) {
   await sb.from("connections").insert({
     scanner_id: me.id, scanned_id: other.id, outcome, detail,
   });
-  showConnectionResult(other.id, other.name, outcome, detail);
+  showConnectionResult(other.id, otherName, outcome, detail);
 }
 
 /* シグネチャ演出:双方に同じものが表示される */
@@ -1357,7 +1405,46 @@ async function loadPhotos() {
 }
 
 /* ---------------- 音楽リクエスト ---------------- */
+function jsonp(url) {
+  return new Promise((res, rej) => {
+    const cb = "itcb_" + Date.now() + Math.floor(Math.random() * 1000);
+    const s = document.createElement("script");
+    window[cb] = (d) => { res(d); delete window[cb]; s.remove(); };
+    s.src = url + "&callback=" + cb;
+    s.onerror = () => { rej(new Error("jsonp failed")); delete window[cb]; s.remove(); };
+    document.body.appendChild(s);
+  });
+}
+let sgTimer = null, sgItems = [];
+function setupSongSuggest() {
+  const inp = $("#song-title"), box = $("#song-suggest");
+  inp.addEventListener("input", () => {
+    clearTimeout(sgTimer);
+    const q = inp.value.trim();
+    if (q.length < 2) { box.style.display = "none"; return; }
+    sgTimer = setTimeout(async () => {
+      try {
+        const d = await jsonp(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=JP&media=music&entity=song&limit=5&lang=ja_jp`);
+        sgItems = d.results || [];
+        if (!sgItems.length) { box.style.display = "none"; return; }
+        box.innerHTML = sgItems.map((r, i) =>
+          `<div class="sg" data-i="${i}"><div>${esc(r.trackName)}</div><div class="sg-artist">${esc(r.artistName)}</div></div>`).join("");
+        box.style.display = "block";
+        box.querySelectorAll(".sg").forEach(el => el.addEventListener("click", () => {
+          const r = sgItems[+el.dataset.i];
+          $("#song-title").value = r.trackName;
+          $("#song-artist").value = r.artistName;
+          box.style.display = "none";
+        }));
+      } catch (e) { box.style.display = "none"; }
+    }, 350);
+  });
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target) && e.target !== inp) box.style.display = "none";
+  });
+}
 function setupSongs() {
+  setupSongSuggest();
   $("#btn-song").addEventListener("click", async () => {
     const title = $("#song-title").value.trim();
     if (!title) return toast("曲名を入れてください");
@@ -1395,7 +1482,9 @@ function renderMe() {
   $("#me-points").textContent = me.points;
   $("#me-name").value = me.name;
   $("#me-bio").value = me.bio || "";
-  $("#me-tags").value = me.tags || "";
+  const curTags = parseTags(me.tags);
+  buildTagPicker("me-tagpick", curTags);
+  $("#me-tags").value = curTags.filter(t => !INTEREST_TAGS.includes(t)).join("、");
   $("#me-intro").value = me.intro || "";
   const { cur, next } = titleFor(me.points);
   $("#me-title").textContent = cur[1];
@@ -1414,7 +1503,7 @@ function setupMe() {
     const name = $("#me-name").value.trim();
     if (!name) return toast("名前は必須です");
     const bio = $("#me-bio").value.trim();
-    const tags = $("#me-tags").value.trim();
+    const tags = combineTags("me-tagpick", "me-tags");
     const intro = $("#me-intro").value.trim();
     const { error } = await sb.from("profiles").update({ name, bio, tags, intro }).eq("id", me.id);
     if (error) return toast("保存に失敗しました");
@@ -1428,7 +1517,7 @@ function setupHost() {
     if (hostMode) {
       hostMode = false;
       document.body.classList.remove("is-host");
-      $("#host-bingo").innerHTML = ""; $("#host-awards").innerHTML = ""; $("#host-match").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-pawards").innerHTML = "";
+      $("#host-bingo").innerHTML = ""; $("#host-awards").innerHTML = ""; $("#host-match").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-pawards").innerHTML = ""; $("#host-members").innerHTML = "";
       loadSongs();
       return toast("主催者モードを終了しました");
     }
@@ -1436,9 +1525,34 @@ function setupHost() {
     if (pin !== CONFIG.HOST_PIN) { if (pin !== null) toast("PINが違います"); return; }
     hostMode = true;
     document.body.classList.add("is-host");
-    renderHostBingo(); renderHostAwards(); renderHostMatch(); renderHostEvents(); renderHostPawards(); loadSongs();
+    renderHostBingo(); renderHostAwards(); renderHostMatch(); renderHostEvents(); renderHostPawards(); renderHostMembers(); loadSongs();
     toast("主催者モードON:あそぶ・ひろばに進行パネルが出ています");
   });
+}
+async function renderHostMembers() {
+  const el = $("#host-members");
+  if (!hostMode) { el.innerHTML = ""; return; }
+  const { data } = await sb.from("profiles").select("id,name,points,created_at")
+    .order("created_at", { ascending: true });
+  el.innerHTML = `<div class="card" style="margin-top:16px">
+    <div class="section-h">主催者:参加者の管理</div>
+    ${(data || []).map(p => `
+      <div class="lb-row">
+        <span>${esc(p.name)}${p.id === me.id ? "(あなた)" : ""}</span>
+        <span style="color:var(--muted);font-size:12px">${p.points}pt</span>
+        ${p.id === me.id ? "" : `<button class="btn ghost small del-member" data-id="${p.id}" data-name="${esc(p.name)}" style="margin-left:auto">削除</button>`}
+      </div>`).join("")}
+    <p class="hint">削除するとその人のことば・写真・賞など全記録が消えます(テストアカウント整理用)。</p>
+  </div>`;
+  el.querySelectorAll(".del-member").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`「${b.dataset.name}」を完全に削除しますか?\nこの人に関する記録もすべて消えます。元に戻せません。`)) return;
+    const { error } = await sb.from("profiles").delete().eq("id", b.dataset.id);
+    if (error) return toast("削除に失敗しました");
+    toast(`「${b.dataset.name}」を削除しました`);
+    await loadProfiles(); renderMatches();
+    await Promise.all([loadLeaderboard(), loadAiMatches(), loadEvents()]);
+    renderHostMembers();
+  }));
 }
 async function loadLeaderboard() {
   const { data } = await sb.from("profiles").select("id,name,points")
