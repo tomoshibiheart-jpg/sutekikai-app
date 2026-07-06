@@ -549,6 +549,17 @@ function fmtDate(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.getDat
 function uuid(){ return (crypto.randomUUID) ? crypto.randomUUID() : "xxxxxxxxyxxx".replace(/[xy]/g,()=>Math.floor(Math.random()*16).toString(16)) + Date.now(); }
 function todayISO(){ const d = new Date(); d.setHours(0,0,0,0); return d.toISOString(); }
 function parseTags(s){ return (s||"").split(/[、,，\s]+/).map(t=>t.trim()).filter(Boolean); }
+function buildTagPicker(containerId, selected) {
+  const el = $("#" + containerId);
+  el.innerHTML = INTEREST_TAGS.map(t =>
+    `<button type="button" class="tag-opt ${selected.includes(t) ? "sel" : ""}" data-tag="${t}">${t}</button>`).join("");
+  el.querySelectorAll(".tag-opt").forEach(b => b.addEventListener("click", () => b.classList.toggle("sel")));
+}
+function combineTags(containerId, inputId) {
+  const picked = [...document.querySelectorAll("#" + containerId + " .tag-opt.sel")].map(b => b.dataset.tag);
+  const free = parseTags($("#" + inputId).value).filter(t => !INTEREST_TAGS.includes(t));
+  return [...picked, ...free].join("、");
+}
 function titleFor(p){
   let cur = TITLES[0], next = null;
   for (const t of TITLES) { if (p >= t[0]) cur = t; else { next = t; break; } }
@@ -583,15 +594,25 @@ async function init() {
   });
 }
 
+function report(e) {
+  console.error(e);
+  const msg = (e && e.message) ? e.message : String(e);
+  toast("読み込みエラー: " + msg, 7000);
+}
 async function enterApp() {
   $("#app").classList.add("active");
-  renderMyQR(); renderMe();
-  await loadProfiles();
-  renderMatches();
-  await Promise.all([loadNotes(), loadBingo(), loadAwards(), loadPhotos(), loadSongs(), loadLeaderboard(), loadAiMatches(), loadEvents()]);
-  subscribeRealtime();
-  setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost();
-  setupAwards(); setupPhotos(); setupSongs();
+  // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupAwards(); setupPhotos(); setupSongs(); } catch (e) { report(e); }
+  try { renderMyQR(); } catch (e) { report(e); }
+  try { renderMe(); } catch (e) { report(e); }
+  try { await loadProfiles(); } catch (e) { report(e); }
+  try { renderMatches(); } catch (e) { report(e); }
+  const safe = (fn) => Promise.resolve().then(fn).catch(report);
+  await Promise.all([
+    safe(loadNotes), safe(loadBingo), safe(loadAwards), safe(loadPhotos),
+    safe(loadSongs), safe(loadLeaderboard), safe(loadAiMatches), safe(loadEvents),
+  ]);
+  try { subscribeRealtime(); } catch (e) { report(e); }
 }
 
 function setupTabs() {
@@ -1166,6 +1187,10 @@ function renderBingo() {
   const area = $("#bingo-area");
   if (!currentGame || currentGame.status !== "open") {
     area.innerHTML = `<div class="card"><p class="empty">ビンゴはまだ始まっていません。<br>会が始まったら、ここにカードが届きます。</p></div>`;
+    return;
+  }
+  if (!myCard) {
+    area.innerHTML = `<div class="card"><p class="empty">カードを準備中です。少し待ってこのタブを開き直してください。</p></div>`;
     return;
   }
   const drawn = currentGame.drawn || [];
