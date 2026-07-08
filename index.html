@@ -226,6 +226,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 #lightbox .lb-meta{color:var(--muted);font-size:12.5px}
 
 /* ---------- events ---------- */
+.event-thumb{width:100%;border-radius:12px;margin-bottom:10px;aspect-ratio:16/9;object-fit:cover;background:var(--surface2)}
 .event-title{font-family:"Shippori Mincho",serif;font-size:18px;color:var(--gold-bright)}
 .event-meta{font-size:13px;color:var(--muted);margin:4px 0 8px}
 .rsvp-row{display:flex;gap:8px;margin-top:12px}
@@ -272,8 +273,6 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .lb-row .pt{margin-left:auto;color:var(--gold);font-family:"Shippori Mincho",serif}
 
 /* ---------- title art & modal ---------- */
-#me-status-card{position:relative;overflow:hidden}
-.title-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:170px;opacity:.13;pointer-events:none}
 .modal{position:fixed;inset:0;z-index:320;display:none;align-items:flex-end;justify-content:center;background:rgba(13,10,17,.9);backdrop-filter:blur(6px)}
 .modal.active{display:flex}
 .modal-sheet{background:var(--surface);border:1px solid var(--line);border-radius:20px 20px 0 0;max-width:520px;width:100%;max-height:85dvh;overflow-y:auto;padding:24px 22px calc(24px + env(safe-area-inset-bottom))}
@@ -281,6 +280,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .att-name{color:var(--gold-bright);background:none;font-size:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;padding:0}
 .lb-row.tappable{cursor:pointer}
 .profile-modal-title{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--gold-bright)}
+
+/* ---------- posts ---------- */
+.post-item{padding:14px 0;border-bottom:1px solid var(--line)}
+.post-item:last-child{border-bottom:none}
+.post-img{width:100%;border-radius:12px;margin-top:8px;cursor:pointer;background:var(--surface2)}
+.post-del{color:var(--ember);font-size:12px;background:none;padding:0;margin-left:auto}
 
 /* ---------- toast ---------- */
 #toast{
@@ -373,6 +378,18 @@ body.is-host .host-badge{display:block}
       <div id="host-events"></div>
     </div>
     <div class="card">
+      <div class="section-h">みんなの投稿</div>
+      <textarea id="post-body" rows="2" maxlength="500" placeholder="想いや感謝を、みんなへ"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+        <button class="btn ghost small" id="btn-post-photo">📷 写真を添える</button>
+        <span id="post-photo-name" style="font-size:12px;color:var(--muted)"></span>
+        <button class="btn small" id="btn-post" style="margin-left:auto">投稿する</button>
+      </div>
+      <input type="file" id="post-photo-input" accept="image/*" style="display:none">
+      <div class="divider"></div>
+      <div id="posts-list"><p class="empty">まだ投稿はありません。</p></div>
+    </div>
+    <div class="card">
       <div class="section-h">みんなのアルバム</div>
       <select id="photo-folder" style="margin-bottom:12px"><option value="all">すべての写真</option></select>
       <input type="file" id="photo-input" accept="image/*" style="display:none">
@@ -383,7 +400,7 @@ body.is-host .host-badge{display:block}
     <div class="card">
       <div class="section-h">音楽リクエスト</div>
       <div class="song-wrap">
-        <input id="song-title" type="text" placeholder="曲名(2文字で候補が出ます)" maxlength="60" autocomplete="off">
+        <input id="song-title" type="text" placeholder="曲名" maxlength="60" autocomplete="off">
         <div id="song-suggest"></div>
       </div>
       <input id="song-artist" type="text" placeholder="アーティスト(任意)" maxlength="60" style="margin-top:8px">
@@ -412,11 +429,10 @@ body.is-host .host-badge{display:block}
   <!-- わたし -->
   <div class="page" id="page-me">
     <h1 class="page-title">わたし</h1>
-    <div class="card" id="me-status-card" style="text-align:center">
-      <div class="title-art" id="me-art">🌰</div>
-      <div style="font-size:12px;color:var(--muted);letter-spacing:.14em;position:relative">素敵ポイント</div>
-      <div class="me-points" id="me-points" style="position:relative">0</div>
-      <div class="me-title-badge" id="me-title" style="position:relative">素敵のたね</div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:12px;color:var(--muted);letter-spacing:.14em">素敵ポイント</div>
+      <div class="me-points" id="me-points">0</div>
+      <div class="me-title-badge" id="me-title">素敵のたね</div>
       <div class="progress-track"><div class="progress-fill" id="me-progress" style="width:0%"></div></div>
       <div class="progress-label" id="me-next"></div>
     </div>
@@ -449,8 +465,8 @@ body.is-host .host-badge{display:block}
     <button data-page="connect" class="on"><span class="ico">✦</span>つながる</button>
     <button data-page="play"><span class="ico">◉</span>あそぶ</button>
     <button data-page="plaza"><span class="ico">▣</span>ひろば</button>
-    <button data-page="notes"><span class="ico">✉</span>ことば</button>
-    <button data-page="me"><span class="ico">☺</span>わたし</button>
+    <button data-page="notes"><span class="ico">✉︎</span>ことば</button>
+    <button data-page="me"><span class="ico">☺︎</span>わたし</button>
   </nav>
 </div>
 
@@ -497,7 +513,8 @@ body.is-host .host-badge{display:block}
 ・基本的に10-20名を参加上限とします。
 ・1日主催者は原則1日1名とし、最大でも2名で開催お願いします。
 ・会貸切の場合は最低でも10人以上で開催お願いします。
-・フードやお土産の持ち込みはご自由にどうぞ。</div>
+・フードやお土産の持ち込みはご自由にどうぞ。
+・会で撮影した写真はアプリ内アルバム・投稿で共有されることがあります(掲載NGの方は主催者までお声がけください)。</div>
     <div style="margin-top:20px"><button class="btn ghost" id="manual-close">とじる</button></div>
   </div>
 </div>
@@ -624,7 +641,7 @@ async function init() {
     const name = $("#ob-name").value.trim();
     if (!name) return toast("お名前を入れてください");
     const { data, error } = await sb.from("profiles")
-      .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"), intro: $("#ob-intro").value.trim() })
+      .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"), intro: $("#ob-intro").value.trim(), role: "member" })
       .select().single();
     if (error) return toast("登録に失敗しました。通信環境を確認してください");
     me = data; localStorage.setItem("sutekikai_uid", me.id);
@@ -641,7 +658,7 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupAwards(); setupPhotos(); setupSongs(); setupManual(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupAwards(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); } catch (e) { report(e); }
   try { renderMyQR(); } catch (e) { report(e); }
   try { renderMe(); } catch (e) { report(e); }
   try { await loadProfiles(); } catch (e) { report(e); }
@@ -649,7 +666,7 @@ async function enterApp() {
   const safe = (fn) => Promise.resolve().then(fn).catch(report);
   await Promise.all([
     safe(loadNotes), safe(loadBingo), safe(loadAwards), safe(loadPhotos),
-    safe(loadSongs), safe(loadLeaderboard), safe(loadEvents),
+    safe(loadSongs), safe(loadLeaderboard), safe(loadEvents), safe(loadPosts),
   ]);
   try { subscribeRealtime(); } catch (e) { report(e); }
 }
@@ -682,7 +699,7 @@ function setupTabs() {
     $$(".page").forEach(p => p.classList.remove("active"));
     $("#page-" + b.dataset.page).classList.add("active");
     // タブを開いたときに軽く更新
-    if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
+    if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); loadPosts(); }
     if (b.dataset.page === "play") { loadAwards(); loadPersonalAwards(); }
     if (b.dataset.page === "me") { loadLeaderboard(); refreshMyPoints(); }
     if (b.dataset.page === "connect") { loadProfiles().then(renderMatches); }
@@ -690,7 +707,7 @@ function setupTabs() {
 }
 
 async function loadProfiles() {
-  const { data } = await sb.from("profiles").select("id,name,tags");
+  const { data } = await sb.from("profiles").select("id,name,tags,role");
   allProfiles = data || [];
   profileMap = {};
   allProfiles.forEach(p => profileMap[p.id] = p.name);
@@ -861,7 +878,7 @@ function addClose(parent, label = "とじる") {
 /* ---------------- イベント(会のご案内・出欠・アンケート) ---------------- */
 const WD = ["日","月","火","水","木","金","土"];
 function fmtEventDate(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]}) ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;}
-let eventsCache = [], rsvpAll = {}, myRsvps = {}, mySurveys = {};
+let eventsCache = [], rsvpAll = {}, myRsvps = {}, mySurveys = {}, evThumbFile = null;
 
 async function loadEvents() {
   const { data: evs } = await sb.from("events").select("*").order("starts_at", { ascending: true });
@@ -897,12 +914,17 @@ function renderEvents() {
     const rs = rsvpAll[e.id] || [];
     const yes = rs.filter(r => r.answer === "yes");
     const mine = myRsvps[e.id];
+    const cap = e.capacity || 20;
+    const left = Math.max(0, cap - yes.length);
+    const full = yes.length >= cap;
     html += `<div class="award-card">
+      ${e.thumb_path ? `<img class="event-thumb" src="${photoUrl(e.thumb_path)}" alt="${esc(e.title)}">` : ""}
       <div class="event-title">${esc(e.title)}</div>
       <div class="event-meta">${e.starts_at ? fmtEventDate(e.starts_at) : "日時未定"}${e.venue ? ` ・ ${esc(e.venue)}` : ""}</div>
+      <div class="event-meta">主催:${e.host_id ? esc(nameOf(e.host_id)) : "くぐり"}さん ・ ${full ? `<span style="color:var(--ember)">満席(${cap}名)</span>` : `残り${left}席 / ${cap}名`}</div>
       ${e.description ? `<div style="font-size:14px;white-space:pre-wrap">${esc(e.description)}</div>` : ""}
       <div class="rsvp-row">
-        ${Object.keys(ANS).map(a => `<button class="rsvp-btn ${mine === a ? "sel" : ""}" data-ev="${e.id}" data-ans="${a}">${ANS[a]}</button>`).join("")}
+        ${Object.keys(ANS).map(a => `<button class="rsvp-btn ${mine === a ? "sel" : ""}" data-ev="${e.id}" data-ans="${a}" ${a === "yes" && full && mine !== "yes" ? "disabled" : ""}>${ANS[a]}</button>`).join("")}
       </div>
       <div class="attendee-line">参加 ${yes.length}人${yes.length ? `:${yes.slice(0, 12).map(r => `<button class="att-name" data-uid="${r.user_id}">${esc(nameOf(r.user_id))}</button>`).join("、")}${yes.length > 12 ? " ほか" : ""}` : ""}</div>
     </div>`;
@@ -983,6 +1005,12 @@ function formatSurvey(body) {
 async function renderHostEvents() {
   const el = $("#host-events");
   if (!hostMode) { el.innerHTML = ""; return; }
+  const upcomingEvs = eventsCache.filter(e => e.status === "upcoming");
+  let prizesByEv = {};
+  if (upcomingEvs.length) {
+    const { data: pz } = await sb.from("prizes").select("*").in("event_id", upcomingEvs.map(e => e.id)).order("created_at");
+    (pz || []).forEach(p => { (prizesByEv[p.event_id] = prizesByEv[p.event_id] || []).push(p); });
+  }
   let surveyBlocks = "";
   const surveyEvents = eventsCache.filter(e => e.survey_open);
   if (surveyEvents.length) {
@@ -1005,34 +1033,99 @@ async function renderHostEvents() {
     <input id="ev-title" placeholder="会の名前(例:第二回 素敵会)" maxlength="40">
     <input id="ev-venue" placeholder="場所" maxlength="60" style="margin-top:8px">
     <input id="ev-date" type="datetime-local" style="margin-top:8px">
+    <div class="field-label">1日主催者</div>
+    <select id="ev-host">${allProfiles.map(p => `<option value="${p.id}" ${p.id === me.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select>
+    <div class="field-label">定員(基本10〜20名・野外は30〜50名)</div>
+    <input id="ev-cap" type="number" value="20" min="5" max="50">
     <textarea id="ev-desc" rows="3" placeholder="ご案内文(自由に)" maxlength="600" style="margin-top:8px"></textarea>
-    <div style="margin-top:10px"><button class="btn small" id="btn-new-event">会をつくる</button></div>
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+      <button class="btn ghost small" id="btn-ev-thumb">🖼 サムネイル画像</button>
+      <span id="ev-thumb-name" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <input type="file" id="ev-thumb-input" accept="image/*" style="display:none">
+    <div style="margin-top:12px"><button class="btn small" id="btn-new-event">会をつくる</button></div>
+    <p class="hint">ルール:1日主催者は原則1名(最大2名)/友達の友達はNG/貸切は10人以上/フード・お土産の持ち込み自由</p>
     ${eventsCache.filter(e => e.status === "upcoming").map(e => {
       const rs = rsvpAll[e.id] || [];
       const grp = a => rs.filter(r => r.answer === a).map(r => esc(nameOf(r.user_id))).join("、") || "—";
+      const yesCount = rs.filter(r => r.answer === "yes").length;
+      const pz = prizesByEv[e.id] || [];
+      const short = Math.max(0, yesCount - pz.length);
       return `<div class="award-card" style="margin-top:12px">
         <div class="award-title">${esc(e.title)}</div>
         <div style="font-size:13px">参加:${grp("yes")}</div>
         <div style="font-size:13px;color:var(--muted)">未定:${grp("maybe")}</div>
         <div style="font-size:13px;color:var(--muted)">欠席:${grp("no")}</div>
+        <div class="divider"></div>
+        <div class="section-h">景品(全員に行き渡らせる)</div>
+        <div style="font-size:13.5px;margin-bottom:8px">${pz.length}個 / 参加${yesCount}人 → ${short > 0 ? `<b style="color:var(--ember)">あと${short}個 不足</b>` : `<b style="color:var(--gold)">充足しています ✦</b>`}</div>
+        ${pz.map(p => `
+          <div class="lb-row">
+            <span style="${p.handed ? "opacity:.45;text-decoration:line-through" : ""}">${esc(p.name)}</span>
+            ${p.provider ? `<span style="color:var(--muted);font-size:12px">${esc(p.provider)}</span>` : ""}
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <button class="btn ghost small pz-hand" data-id="${p.id}" data-h="${p.handed ? 1 : 0}">${p.handed ? "戻す" : "渡した"}</button>
+              <button class="btn ghost small pz-del" data-id="${p.id}">×</button>
+            </span>
+          </div>`).join("")}
+        <input class="pz-name" data-ev="${e.id}" placeholder="景品名(例:○○さん協賛の紅茶)" maxlength="60" style="margin-top:8px">
+        <input class="pz-prov" data-ev="${e.id}" placeholder="提供者(任意)" maxlength="30" style="margin-top:8px">
+        <div style="margin-top:8px"><button class="btn small pz-add" data-ev="${e.id}">景品を追加</button></div>
+        <div class="divider"></div>
         <div style="margin-top:10px"><button class="btn ghost small end-event-btn" data-ev="${e.id}">会を終了してアンケートを開く</button></div>
       </div>`;
     }).join("")}
     ${surveyBlocks}`;
 
+  $("#btn-ev-thumb")?.addEventListener("click", () => $("#ev-thumb-input").click());
+  $("#ev-thumb-input")?.addEventListener("change", (e) => {
+    evThumbFile = (e.target.files && e.target.files[0]) || null;
+    $("#ev-thumb-name").textContent = evThumbFile ? "画像を選択済み ✦" : "";
+    e.target.value = "";
+  });
   $("#btn-new-event")?.addEventListener("click", async () => {
     const title = $("#ev-title").value.trim();
     if (!title) return toast("会の名前を入れてください");
     const dateVal = $("#ev-date").value;
+    const cap = Math.min(50, Math.max(5, parseInt($("#ev-cap").value) || 20));
+    let thumb_path = null;
+    if (evThumbFile) {
+      try {
+        const blob = await compressToJpeg(evThumbFile, 1200, 0.82);
+        thumb_path = `event_${uuid()}.jpg`;
+        const { error: upErr } = await sb.storage.from("photos").upload(thumb_path, blob, { contentType: "image/jpeg" });
+        if (upErr) throw upErr;
+      } catch (e) { toast("画像のアップロードに失敗しました", 3500); return; }
+    }
     await sb.from("events").insert({
       title,
       venue: $("#ev-venue").value.trim(),
       description: $("#ev-desc").value.trim(),
       starts_at: dateVal ? new Date(dateVal).toISOString() : null,
+      host_id: $("#ev-host").value || me.id,
+      capacity: cap,
+      thumb_path,
     });
+    evThumbFile = null;
     toast("会をつくりました。全員に届きます ✦");
     await loadEvents();
   });
+  $$(".pz-add").forEach(b => b.addEventListener("click", async () => {
+    const name = document.querySelector(`.pz-name[data-ev="${b.dataset.ev}"]`).value.trim();
+    if (!name) return toast("景品名を入れてください");
+    const provider = document.querySelector(`.pz-prov[data-ev="${b.dataset.ev}"]`).value.trim();
+    await sb.from("prizes").insert({ event_id: b.dataset.ev, name, provider });
+    toast("景品を追加しました ✦");
+    renderHostEvents();
+  }));
+  $$(".pz-del").forEach(b => b.addEventListener("click", async () => {
+    await sb.from("prizes").delete().eq("id", b.dataset.id);
+    renderHostEvents();
+  }));
+  $$(".pz-hand").forEach(b => b.addEventListener("click", async () => {
+    await sb.from("prizes").update({ handed: b.dataset.h !== "1" }).eq("id", b.dataset.id);
+    renderHostEvents();
+  }));
   $$(".end-event-btn").forEach(b => b.addEventListener("click", async () => {
     if (!confirm("この会を終了して、アンケートを開きますか?")) return;
     await sb.from("events").update({ status: "past", survey_open: true }).eq("id", b.dataset.ev);
@@ -1406,10 +1499,13 @@ async function renderHostAwards() {
       <div class="section-h">主催者:〇〇賞をつくる</div>
       <input id="new-award-title" type="text" placeholder="例:いちばん笑わせてくれたで賞" maxlength="40">
       <div style="margin-top:10px"><button class="btn small" id="btn-new-award">賞をつくる</button></div>
-      ${awardsCache.filter(a => a.status === "open").map(a => `
+      ${awardsCache.map(a => `
         <div class="award-card" style="margin-top:12px">
-          <div class="award-title">${esc(a.title)}</div>
-          <button class="btn ghost small reveal-btn" data-award="${a.id}">結果を発表する</button>
+          <div class="award-title">${esc(a.title)}${a.status === "revealed" ? "(発表済み)" : ""}</div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            ${a.status === "open" ? `<button class="btn ghost small reveal-btn" data-award="${a.id}">結果を発表する</button>` : ""}
+            <button class="btn ghost small award-del-btn" data-award="${a.id}" data-title="${esc(a.title)}" style="border-color:var(--ember);color:var(--ember)">削除</button>
+          </div>
         </div>`).join("")}
     </div>`;
   $("#btn-new-award")?.addEventListener("click", async () => {
@@ -1425,9 +1521,71 @@ async function renderHostAwards() {
     await sb.from("awards").update({ status: "revealed" }).eq("id", b.dataset.award);
     await loadAwards();
   }));
+  $$(".award-del-btn").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm(`「${b.dataset.title}」を削除しますか?\n投票の記録もすべて消えます。元に戻せません。`)) return;
+    await sb.from("awards").delete().eq("id", b.dataset.award);
+    toast("賞を削除しました");
+    await loadAwards();
+  }));
 }
 
 /* ---------------- アルバム ---------------- */
+let postPhotoFile = null;
+function setupPosts() {
+  $("#btn-post-photo").addEventListener("click", () => $("#post-photo-input").click());
+  $("#post-photo-input").addEventListener("change", (e) => {
+    postPhotoFile = (e.target.files && e.target.files[0]) || null;
+    $("#post-photo-name").textContent = postPhotoFile ? "写真を添付済み ✦" : "";
+    e.target.value = "";
+  });
+  $("#btn-post").addEventListener("click", async () => {
+    const body = $("#post-body").value.trim();
+    if (!body && !postPhotoFile) return toast("ことばか写真を、どちらかは添えてください");
+    toast("投稿中…", 6000);
+    try {
+      let photo_path = null;
+      if (postPhotoFile) {
+        const blob = await compressToJpeg(postPhotoFile);
+        photo_path = `post_${uuid()}.jpg`;
+        const { error: upErr } = await sb.storage.from("photos").upload(photo_path, blob, { contentType: "image/jpeg" });
+        if (upErr) throw upErr;
+      }
+      const { error } = await sb.from("posts").insert({ user_id: me.id, body, photo_path });
+      if (error) throw error;
+      $("#post-body").value = ""; postPhotoFile = null; $("#post-photo-name").textContent = "";
+      toast("投稿しました ✦");
+      await loadPosts();
+    } catch (e) { toast("投稿に失敗しました。通信環境を確認してください", 4000); }
+  });
+}
+async function loadPosts() {
+  const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
+  const el = $("#posts-list");
+  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ投稿はありません。最初のひとことをぜひ。</p>`; return; }
+  el.innerHTML = data.map(p => `
+    <div class="post-item">
+      <div class="note-meta">
+        <span>${esc(nameOf(p.user_id))}さん</span><span>・${fmtDate(p.created_at)}</span>
+        ${(p.user_id === me.id || hostMode) ? `<button class="post-del" data-id="${p.id}" data-path="${p.photo_path || ""}">削除</button>` : ""}
+      </div>
+      ${p.body ? `<div class="note-body">${esc(p.body)}</div>` : ""}
+      ${p.photo_path ? `<img class="post-img" loading="lazy" src="${photoUrl(p.photo_path)}" alt="投稿写真">` : ""}
+    </div>`).join("");
+  el.querySelectorAll(".post-del").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("この投稿を削除しますか?")) return;
+    await sb.from("posts").delete().eq("id", b.dataset.id);
+    if (b.dataset.path) { try { await sb.storage.from("photos").remove([b.dataset.path]); } catch (e) {} }
+    toast("削除しました");
+    await loadPosts();
+  }));
+  el.querySelectorAll(".post-img").forEach(img => img.addEventListener("click", () => {
+    lbCurrent = null;
+    $("#lb-img").src = img.src;
+    $("#lb-meta").textContent = "";
+    $("#lb-del").style.display = "none";
+    $("#lightbox").classList.add("active");
+  }));
+}
 let lbCurrent = null;
 function setupPhotos() {
   $("#btn-photo").addEventListener("click", () => $("#photo-input").click());
@@ -1437,7 +1595,7 @@ function setupPhotos() {
   $("#lb-close").addEventListener("click", () => $("#lightbox").classList.remove("active"));
   $("#lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") $("#lightbox").classList.remove("active"); });
   $("#lb-del").addEventListener("click", async () => {
-    if (!lbCurrent || lbCurrent.uid !== me.id) return;
+    if (!lbCurrent || (lbCurrent.uid !== me.id && !hostMode)) return;
     if (!confirm("この写真をアルバムから削除しますか?")) return;
     await sb.from("photos").delete().eq("id", lbCurrent.id);
     try { await sb.storage.from("photos").remove([lbCurrent.path]); } catch (e) {}
@@ -1517,7 +1675,7 @@ async function loadPhotos() {
     lbCurrent = { id: img.dataset.id, path: img.dataset.path, uid: img.dataset.uid };
     $("#lb-img").src = photoUrl(img.dataset.path);
     $("#lb-meta").textContent = `${img.dataset.by}さん撮影 ・ ${fmtDate(img.dataset.at)}(長押しで保存できます)`;
-    $("#lb-del").style.display = (img.dataset.uid === me.id) ? "inline-flex" : "none";
+    $("#lb-del").style.display = (img.dataset.uid === me.id || hostMode) ? "inline-flex" : "none";
     $("#lightbox").classList.add("active");
   }));
 }
@@ -1606,7 +1764,6 @@ function renderMe() {
   $("#me-intro").value = me.intro || "";
   const { cur, next } = titleFor(me.points);
   $("#me-title").textContent = `${cur[2] || "✦"} ${cur[1]}`;
-  $("#me-art").textContent = cur[2] || "✦";
   if (next) {
     const span = next[0] - cur[0];
     const pct = Math.min(100, Math.round(((me.points - cur[0]) / span) * 100));
@@ -1637,25 +1794,39 @@ function setupHost() {
       hostMode = false;
       document.body.classList.remove("is-host");
       $("#host-bingo").innerHTML = ""; $("#host-awards").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-pawards").innerHTML = ""; $("#host-members").innerHTML = "";
-      loadSongs();
+      loadSongs(); loadPosts();
       return toast("主催者モードを終了しました");
     }
     const pin = prompt("主催者PINを入力");
     if (pin !== CONFIG.HOST_PIN) { if (pin !== null) toast("PINが違います"); return; }
     hostMode = true;
     document.body.classList.add("is-host");
-    renderHostBingo(); renderHostAwards(); renderHostEvents(); renderHostPawards(); renderHostMembers(); loadSongs();
+    renderHostBingo(); renderHostAwards(); renderHostEvents(); renderHostPawards(); renderHostMembers(); loadSongs(); loadPosts();
     toast("主催者モードON:あそぶ・ひろばに進行パネルが出ています");
   });
 }
 async function renderHostMembers() {
   const el = $("#host-members");
   if (!hostMode) { el.innerHTML = ""; return; }
-  const { data } = await sb.from("profiles").select("id,name,points,created_at")
+  const { data } = await sb.from("profiles").select("id,name,points,role,created_at")
     .order("created_at", { ascending: true });
+  const all = data || [];
+  const memberCount = all.length;
+  const STAGES = [[0, "無料期", "¥0"], [100, "第1段階", "年会費 ¥5,000"], [300, "第2段階", "年会費 ¥10,000"], [500, "第3段階", "年会費 ¥20,000"]];
+  let cur = STAGES[0], next = null;
+  for (const s of STAGES) { if (memberCount >= s[0]) cur = s; else { next = s; break; } }
+  const pct = next ? Math.min(100, Math.round((memberCount - cur[0]) / (next[0] - cur[0]) * 100)) : 100;
   el.innerHTML = `<div class="card" style="margin-top:16px">
-    <div class="section-h">主催者:参加者の管理</div>
-    ${(data || []).map(p => `
+    <div class="section-h">主催者:会員ダッシュボード</div>
+    <div style="text-align:center;margin:6px 0 4px">
+      <span style="font-family:'Shippori Mincho',serif;font-size:40px;color:var(--gold-bright)">${memberCount}</span>
+      <span style="color:var(--muted);font-size:13px"> 名の会員 ・ 現在は<b style="color:var(--cream)">${cur[1]}(${cur[2]})</b></span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">${next ? `${next[0]}人到達で${next[1]}(${next[2]})へ ・ あと${next[0] - memberCount}人` : "最終段階です"}</div>
+    <div class="divider"></div>
+    <div class="section-h">参加者の管理</div>
+    ${all.map(p => `
       <div class="lb-row">
         <span>${esc(p.name)}${p.id === me.id ? "(あなた)" : ""}</span>
         <span style="color:var(--muted);font-size:12px">${p.points}pt</span>
@@ -1744,6 +1915,12 @@ function subscribeRealtime() {
     .on("postgres_changes",
       { event: "*", schema: "public", table: "rsvps" },
       () => loadEvents())
+    .subscribe();
+
+  sb.channel("posts-live")
+    .on("postgres_changes",
+      { event: "INSERT", schema: "public", table: "posts" },
+      () => loadPosts())
     .subscribe();
 
   sb.channel("songs-live")
