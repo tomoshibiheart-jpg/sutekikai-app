@@ -83,7 +83,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 }
 .tabbar button{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--muted);font-size:10px;letter-spacing:.05em;
+  color:var(--muted);font-size:9.5px;letter-spacing:.02em;
 }
 .tabbar button .ico{font-size:19px;line-height:1}
 .tabbar button.on{color:var(--gold)}
@@ -378,18 +378,6 @@ body.is-host .host-badge{display:block}
       <div id="host-events"></div>
     </div>
     <div class="card">
-      <div class="section-h">みんなの投稿</div>
-      <textarea id="post-body" rows="2" maxlength="500" placeholder="想いや感謝を、みんなへ"></textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
-        <button class="btn ghost small" id="btn-post-photo">📷 写真を添える</button>
-        <span id="post-photo-name" style="font-size:12px;color:var(--muted)"></span>
-        <button class="btn small" id="btn-post" style="margin-left:auto">投稿する</button>
-      </div>
-      <input type="file" id="post-photo-input" accept="image/*" style="display:none">
-      <div class="divider"></div>
-      <div id="posts-list"><p class="empty">まだ投稿はありません。</p></div>
-    </div>
-    <div class="card">
       <div class="section-h">みんなのアルバム</div>
       <select id="photo-folder" style="margin-bottom:12px"><option value="all">すべての写真</option></select>
       <input type="file" id="photo-input" accept="image/*" style="display:none">
@@ -411,6 +399,22 @@ body.is-host .host-badge{display:block}
   </div>
 
   <!-- ことば -->
+  <!-- みんな(フィード) -->
+  <div class="page" id="page-feed">
+    <h1 class="page-title">みんな</h1>
+    <p class="page-lead">近況も、感謝も、ふとした一言も。素敵会のみんなへ。</p>
+    <div class="card">
+      <textarea id="post-body" rows="3" maxlength="500" placeholder="いま、どんな気分?"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+        <button class="btn ghost small" id="btn-post-photo">📷 写真</button>
+        <span id="post-photo-name" style="font-size:12px;color:var(--muted)"></span>
+        <button class="btn small" id="btn-post" style="margin-left:auto">シェアする</button>
+      </div>
+      <input type="file" id="post-photo-input" accept="image/*" style="display:none">
+    </div>
+    <div id="posts-list"><p class="empty">まだ投稿はありません。最初の一言をぜひ。</p></div>
+  </div>
+
   <div class="page" id="page-notes">
     <h1 class="page-title">ことば</h1>
     <p class="page-lead">贈られたことばは残り続け、贈られた人には素敵ポイントが灯ります。</p>
@@ -465,6 +469,7 @@ body.is-host .host-badge{display:block}
     <button data-page="connect" class="on"><span class="ico">✦</span>つながる</button>
     <button data-page="play"><span class="ico">◉</span>あそぶ</button>
     <button data-page="plaza"><span class="ico">▣</span>ひろば</button>
+    <button data-page="feed"><span class="ico">◍</span>みんな</button>
     <button data-page="notes"><span class="ico">✉︎</span>ことば</button>
     <button data-page="me"><span class="ico">☺︎</span>わたし</button>
   </nav>
@@ -699,7 +704,8 @@ function setupTabs() {
     $$(".page").forEach(p => p.classList.remove("active"));
     $("#page-" + b.dataset.page).classList.add("active");
     // タブを開いたときに軽く更新
-    if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); loadPosts(); }
+    if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
+    if (b.dataset.page === "feed") { loadPosts(); }
     if (b.dataset.page === "play") { loadAwards(); loadPersonalAwards(); }
     if (b.dataset.page === "me") { loadLeaderboard(); refreshMyPoints(); }
     if (b.dataset.page === "connect") { loadProfiles().then(renderMatches); }
@@ -881,6 +887,7 @@ function fmtEventDate(iso){const d=new Date(iso);return `${d.getMonth()+1}/${d.g
 let eventsCache = [], rsvpAll = {}, myRsvps = {}, mySurveys = {}, evThumbFile = null;
 
 async function loadEvents() {
+  if (!allProfiles.length) await loadProfiles();
   const { data: evs } = await sb.from("events").select("*").order("starts_at", { ascending: true });
   eventsCache = evs || [];
   rsvpAll = {}; myRsvps = {}; mySurveys = {};
@@ -894,12 +901,21 @@ async function loadEvents() {
     const { data: svs } = await sb.from("surveys").select("event_id,body").eq("user_id", me.id).in("event_id", ids);
     (svs || []).forEach(s => mySurveys[s.event_id] = s.body);
   }
+  const allRsvpIds = Object.values(rsvpAll).flat().map(r => r.user_id);
+  const hostIds = eventsCache.map(e => e.host_id).filter(Boolean);
+  await ensureNames([...new Set([...allRsvpIds, ...hostIds])]);
   renderEvents();
   if (hostMode) renderHostEvents();
   buildPhotoFolders();
   loadPersonalAwards();
 }
 
+async function ensureNames(ids) {
+  const missing = ids.filter(id => id && !profileMap[id]);
+  if (!missing.length) return;
+  const { data } = await sb.from("profiles").select("id,name").in("id", missing);
+  (data || []).forEach(p => profileMap[p.id] = p.name);
+}
 function renderEvents() {
   const el = $("#events-area");
   const upcoming = eventsCache.filter(e => e.status === "upcoming");
@@ -910,7 +926,7 @@ function renderEvents() {
   }
   const ANS = { yes: "参加する", maybe: "未定", no: "欠席" };
   let html = "";
-  upcoming.forEach(e => {
+  upcoming.forEach(e => {  // 名前補完は呼び出し側で実施済み
     const rs = rsvpAll[e.id] || [];
     const yes = rs.filter(r => r.answer === "yes");
     const mine = myRsvps[e.id];
@@ -1561,7 +1577,7 @@ function setupPosts() {
 async function loadPosts() {
   const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
   const el = $("#posts-list");
-  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ投稿はありません。最初のひとことをぜひ。</p>`; return; }
+  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ投稿はありません。最初の一言をぜひ。</p>`; return; }
   el.innerHTML = data.map(p => `
     <div class="post-item">
       <div class="note-meta">
