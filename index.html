@@ -527,6 +527,33 @@ body.is-host .host-badge{display:block}
   <div class="modal-sheet" id="profile-sheet"></div>
 </div>
 
+<!-- ======== 会の編集 ======== -->
+<div class="modal" id="event-edit-modal">
+  <div class="modal-sheet">
+    <div class="profile-modal-title" style="margin-bottom:14px">会のご案内を編集</div>
+    <div class="field-label">会の名前</div>
+    <input id="ee-title" maxlength="40">
+    <div class="field-label">場所</div>
+    <input id="ee-venue" maxlength="60">
+    <div class="field-label">日時</div>
+    <input id="ee-date" type="datetime-local">
+    <div class="field-label">定員</div>
+    <input id="ee-cap" type="number" min="5" max="50">
+    <div class="field-label">ご案内文</div>
+    <textarea id="ee-desc" rows="4" maxlength="600"></textarea>
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+      <button class="btn ghost small" id="ee-thumb-btn">🖼 サムネイル画像を変更</button>
+      <span id="ee-thumb-name" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <input type="file" id="ee-thumb-input" accept="image/*" style="display:none">
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn" id="ee-save" style="flex:1">保存する</button>
+      <button class="btn ghost" id="ee-cancel">とじる</button>
+    </div>
+    <div style="margin-top:14px"><button class="btn ghost small" id="ee-delete" style="border-color:var(--ember);color:var(--ember)">この会を削除する</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -661,7 +688,7 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); } catch (e) { report(e); }
   try { renderMyQR(); } catch (e) { report(e); }
   try { renderMe(); } catch (e) { report(e); }
   try { await loadProfiles(); } catch (e) { report(e); }
@@ -710,6 +737,70 @@ function setupAvatar() {
       prev.outerHTML = `<img id="avatar-preview" class="avatar" src="${URL.createObjectURL(blob)}" style="width:96px;height:96px" alt="preview">`;
       toast("「保存する」を押すと反映されます");
     } catch (err) { toast("画像を読み込めませんでした"); }
+  });
+}
+let editingEventId = null;
+let eeThumbFile = null;
+function openEventEditor(evId) {
+  const e = eventsCache.find(x => x.id === evId);
+  if (!e) return toast("会が見つかりません");
+  editingEventId = evId;
+  eeThumbFile = null;
+  $("#ee-title").value = e.title || "";
+  $("#ee-venue").value = e.venue || "";
+  $("#ee-cap").value = e.capacity || 20;
+  $("#ee-desc").value = e.description || "";
+  $("#ee-thumb-name").textContent = e.thumb_path ? "現在の画像あり" : "";
+  if (e.starts_at) {
+    const d = new Date(e.starts_at);
+    const pad = n => String(n).padStart(2, "0");
+    $("#ee-date").value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else $("#ee-date").value = "";
+  $("#event-edit-modal").classList.add("active");
+}
+function setupEventEditor() {
+  $("#ee-cancel").addEventListener("click", () => $("#event-edit-modal").classList.remove("active"));
+  $("#event-edit-modal").addEventListener("click", (e) => { if (e.target.id === "event-edit-modal") e.target.classList.remove("active"); });
+  $("#ee-thumb-btn").addEventListener("click", () => $("#ee-thumb-input").click());
+  $("#ee-thumb-input").addEventListener("change", (e) => {
+    eeThumbFile = (e.target.files && e.target.files[0]) || null;
+    $("#ee-thumb-name").textContent = eeThumbFile ? "新しい画像を選択済み ✦" : "";
+    e.target.value = "";
+  });
+  $("#ee-save").addEventListener("click", async () => {
+    if (!editingEventId) return;
+    const title = $("#ee-title").value.trim();
+    if (!title) return toast("会の名前を入れてください");
+    const dateVal = $("#ee-date").value;
+    const cap = Math.min(50, Math.max(5, parseInt($("#ee-cap").value) || 20));
+    const patch = {
+      title,
+      venue: $("#ee-venue").value.trim(),
+      description: $("#ee-desc").value.trim(),
+      starts_at: dateVal ? new Date(dateVal).toISOString() : null,
+      capacity: cap,
+    };
+    if (eeThumbFile) {
+      try {
+        const blob = await compressToJpeg(eeThumbFile, 1200, 0.82);
+        patch.thumb_path = `event_${uuid()}.jpg`;
+        const { error: upErr } = await sb.storage.from("photos").upload(patch.thumb_path, blob, { contentType: "image/jpeg" });
+        if (upErr) throw upErr;
+      } catch (err) { toast("画像のアップロードに失敗しました", 3500); return; }
+    }
+    const { error } = await sb.from("events").update(patch).eq("id", editingEventId);
+    if (error) return toast("保存に失敗しました。通信環境を確認してください", 4000);
+    $("#event-edit-modal").classList.remove("active");
+    toast("ご案内を更新しました ✦");
+    await loadEvents();
+  });
+  $("#ee-delete").addEventListener("click", async () => {
+    if (!editingEventId) return;
+    if (!confirm("この会を削除しますか?\n出欠・アンケートの記録も消えます。元に戻せません。")) return;
+    await sb.from("events").delete().eq("id", editingEventId);
+    $("#event-edit-modal").classList.remove("active");
+    toast("会を削除しました");
+    await loadEvents();
   });
 }
 async function showProfile(userId) {
@@ -1075,7 +1166,10 @@ async function renderHostEvents() {
       const pz = prizesByEv[e.id] || [];
       const short = Math.max(0, yesCount - pz.length);
       return `<div class="award-card" style="margin-top:12px">
-        <div class="award-title">${esc(e.title)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="award-title" style="flex:1">${esc(e.title)}</div>
+          <button class="btn ghost small ev-edit" data-ev="${e.id}">編集</button>
+        </div>
         <div style="font-size:13px">参加:${grp("yes")}</div>
         <div style="font-size:13px;color:var(--muted)">未定:${grp("maybe")}</div>
         <div style="font-size:13px;color:var(--muted)">欠席:${grp("no")}</div>
@@ -1106,6 +1200,7 @@ async function renderHostEvents() {
     $("#ev-thumb-name").textContent = evThumbFile ? "画像を選択済み ✦" : "";
     e.target.value = "";
   });
+  $$(".ev-edit").forEach(b => b.addEventListener("click", () => openEventEditor(b.dataset.ev)));
   $("#btn-new-event")?.addEventListener("click", async () => {
     const title = $("#ev-title").value.trim();
     if (!title) return toast("会の名前を入れてください");
@@ -1120,7 +1215,7 @@ async function renderHostEvents() {
         if (upErr) throw upErr;
       } catch (e) { toast("画像のアップロードに失敗しました", 3500); return; }
     }
-    await sb.from("events").insert({
+    const { error: insErr } = await sb.from("events").insert({
       title,
       venue: $("#ev-venue").value.trim(),
       description: $("#ev-desc").value.trim(),
@@ -1128,7 +1223,11 @@ async function renderHostEvents() {
       host_id: $("#ev-host").value || me.id,
       capacity: cap,
       thumb_path,
+      status: "upcoming",
     });
+    if (insErr) { toast("会の作成に失敗しました。通信環境を確認してください", 4000); return; }
+    $("#ev-title").value = ""; $("#ev-venue").value = ""; $("#ev-date").value = ""; $("#ev-desc").value = "";
+    $("#ev-thumb-name").textContent = "";
     evThumbFile = null;
     toast("会をつくりました。全員に届きます ✦");
     await loadEvents();
