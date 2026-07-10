@@ -281,11 +281,20 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .lb-row.tappable{cursor:pointer}
 .profile-modal-title{font-family:"Shippori Mincho",serif;font-size:22px;color:var(--gold-bright)}
 
+/* ---------- avatar ---------- */
+.avatar{border-radius:50%;object-fit:cover;background:var(--surface2);border:1.5px solid var(--line);flex-shrink:0}
+.avatar-ph{border-radius:50%;background:var(--surface2);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:"Shippori Mincho",serif;flex-shrink:0}
+.avatar-edit{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
+#avatar-preview{width:96px;height:96px}
+
 /* ---------- posts ---------- */
 .post-item{padding:14px 0;border-bottom:1px solid var(--line)}
 .post-item:last-child{border-bottom:none}
 .post-img{width:100%;border-radius:12px;margin-top:8px;cursor:pointer;background:var(--surface2)}
-.post-del{color:var(--ember);font-size:12px;background:none;padding:0;margin-left:auto}
+.post-del{color:var(--ember);font-size:12px;background:none;padding:0}
+.post-pin{color:var(--gold);font-size:12px;background:none;padding:0}
+.post-item.pinned{background:linear-gradient(180deg,rgba(228,184,98,.08),transparent);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px}
+.pin-tag{font-size:10.5px;padding:2px 9px;border-radius:999px;border:1px solid var(--gold);color:var(--gold-bright);letter-spacing:.05em}
 
 /* ---------- toast ---------- */
 #toast{
@@ -344,27 +353,15 @@ body.is-host .host-badge{display:block}
       <div class="points-pill">✦ <span id="my-points-label">0</span> 素敵ポイント</div>
     </div>
     <button class="btn" id="btn-scan">相手のQRを読み取る</button>
-    <div class="card" style="margin-top:16px">
-      <div class="section-h">同じ「好きなこと」を持つ人</div>
-      <div id="match-list"><p class="empty">読み込み中…</p></div>
-    </div>
   </div>
 
-  <!-- あそぶ(ビンゴ+投票) -->
+  <!-- あそぶ(ビンゴ) -->
   <div class="page" id="page-play">
     <h1 class="page-title">あそぶ</h1>
-    <p class="page-lead">ビンゴと、みんなで贈る「〇〇賞」。</p>
+    <p class="page-lead">みんなでビンゴ。景品はぜんいんに行き渡ります。</p>
     <div class="host-badge">主催者モード ON</div>
     <div id="bingo-area"><p class="empty">読み込み中…</p></div>
     <div id="host-bingo"></div>
-    <div class="divider"></div>
-    <div class="section-h" style="font-size:15px">みんなで贈る 〇〇賞</div>
-    <div id="awards-area"><p class="empty">読み込み中…</p></div>
-    <div id="host-awards"></div>
-    <div class="divider"></div>
-    <div class="section-h" style="font-size:15px">贈る賞 — あなたから、あの人へ</div>
-    <div id="pawards-area"><p class="empty">読み込み中…</p></div>
-    <div id="host-pawards"></div>
   </div>
 
   <!-- ひろば(アルバム+音楽) -->
@@ -442,6 +439,11 @@ body.is-host .host-badge{display:block}
     </div>
     <div class="card">
       <div class="section-h">プロフィール</div>
+      <div class="avatar-edit">
+        <div id="avatar-preview" class="avatar-ph" style="font-size:32px">?</div>
+        <button class="btn ghost small" id="btn-avatar">アイコン写真を選ぶ</button>
+        <input type="file" id="avatar-input" accept="image/*" style="display:none">
+      </div>
       <div class="field-label">名前</div>
       <input id="me-name" type="text" maxlength="20">
       <div class="field-label">ひとこと</div>
@@ -452,10 +454,6 @@ body.is-host .host-badge{display:block}
       <div class="field-label">自己紹介</div>
       <textarea id="me-intro" rows="3" maxlength="300" placeholder="出身、仕事、最近ハマっていることなど自由に"></textarea>
       <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
-    </div>
-    <div class="card">
-      <div class="section-h">もらった賞</div>
-      <div id="my-awards"><p class="empty">まだ賞はありません。会が終わると贈り合いが始まります。</p></div>
     </div>
     <div class="card">
       <div class="section-h">素敵ポイント ランキング</div>
@@ -597,7 +595,7 @@ const TITLES = [
 /* ================================================================ */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
-let sb, me = null, profileMap = {}, allProfiles = [];
+let sb, me = null, profileMap = {}, avatarMap = {}, allProfiles = [];
 let currentGame = null, myCard = null, hostMode = false;
 let awardsCache = [], myVotes = {};
 
@@ -663,14 +661,13 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupAwards(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); } catch (e) { report(e); }
   try { renderMyQR(); } catch (e) { report(e); }
   try { renderMe(); } catch (e) { report(e); }
   try { await loadProfiles(); } catch (e) { report(e); }
-  try { renderMatches(); } catch (e) { report(e); }
   const safe = (fn) => Promise.resolve().then(fn).catch(report);
   await Promise.all([
-    safe(loadNotes), safe(loadBingo), safe(loadAwards), safe(loadPhotos),
+    safe(loadNotes), safe(loadBingo), safe(loadPhotos),
     safe(loadSongs), safe(loadLeaderboard), safe(loadEvents), safe(loadPosts),
   ]);
   try { subscribeRealtime(); } catch (e) { report(e); }
@@ -682,13 +679,49 @@ function setupManual() {
   $("#manual-modal").addEventListener("click", (e) => { if (e.target.id === "manual-modal") e.target.classList.remove("active"); });
   $("#profile-modal").addEventListener("click", (e) => { if (e.target.id === "profile-modal") e.target.classList.remove("active"); });
 }
+function avatarHtml(p, size) {
+  if (p && p.avatar_path) {
+    return `<img class="avatar" src="${photoUrl(p.avatar_path)}" style="width:${size}px;height:${size}px" alt="${esc(p.name||"")}">`;
+  }
+  const initial = (p && p.name) ? esc(p.name.trim().charAt(0)) : "?";
+  return `<div class="avatar-ph" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.42)}px">${initial}</div>`;
+}
+async function cropToSquareJpeg(file, dim = 400, quality = 0.85) {
+  const { img, url } = await loadImageFromFile(file);
+  const side = Math.min(img.width, img.height);
+  const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = dim; canvas.height = dim;
+  canvas.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, dim, dim);
+  URL.revokeObjectURL(url);
+  return new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+}
+let avatarFile = null;
+function setupAvatar() {
+  $("#btn-avatar").addEventListener("click", () => $("#avatar-input").click());
+  $("#avatar-input").addEventListener("change", async (e) => {
+    const f = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (!f) return;
+    avatarFile = f;
+    try {
+      const blob = await cropToSquareJpeg(f);
+      const prev = $("#avatar-preview");
+      prev.outerHTML = `<img id="avatar-preview" class="avatar" src="${URL.createObjectURL(blob)}" style="width:96px;height:96px" alt="preview">`;
+      toast("「保存する」を押すと反映されます");
+    } catch (err) { toast("画像を読み込めませんでした"); }
+  });
+}
 async function showProfile(userId) {
   const { data: p } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (!p) return toast("プロフィールが見つかりません");
   const { cur } = titleFor(p.points);
   const tags = parseTags(p.tags);
   $("#profile-sheet").innerHTML = `
-    <div class="profile-modal-title">${esc(p.name)}</div>
+    <div style="display:flex;align-items:center;gap:14px">
+      ${avatarHtml(p, 64)}
+      <div class="profile-modal-title">${esc(p.name)}</div>
+    </div>
     <div style="margin:10px 0"><span class="me-title-badge">${cur[2] || "✦"} ${esc(cur[1])}</span>
       <span style="margin-left:10px;color:var(--gold);font-family:'Shippori Mincho',serif">${p.points}pt</span></div>
     ${p.bio ? `<div style="font-size:14.5px;margin-top:8px">${esc(p.bio)}</div>` : ""}
@@ -706,17 +739,18 @@ function setupTabs() {
     // タブを開いたときに軽く更新
     if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
     if (b.dataset.page === "feed") { loadPosts(); }
-    if (b.dataset.page === "play") { loadAwards(); loadPersonalAwards(); }
+    if (b.dataset.page === "play") { }
     if (b.dataset.page === "me") { loadLeaderboard(); refreshMyPoints(); }
-    if (b.dataset.page === "connect") { loadProfiles().then(renderMatches); }
+    if (b.dataset.page === "connect") { loadProfiles(); }
   }));
 }
 
 async function loadProfiles() {
-  const { data } = await sb.from("profiles").select("id,name,tags,role");
+  const { data } = await sb.from("profiles").select("id,name,tags,role,avatar_path");
   allProfiles = data || [];
   profileMap = {};
-  allProfiles.forEach(p => profileMap[p.id] = p.name);
+  avatarMap = {};
+  allProfiles.forEach(p => { profileMap[p.id] = p.name; avatarMap[p.id] = p.avatar_path || null; });
   const sel = $("#note-to");
   const cur = sel.value;
   sel.innerHTML = `<option value="">贈る相手を選ぶ</option>` +
@@ -725,6 +759,7 @@ async function loadProfiles() {
   sel.value = cur;
 }
 const nameOf = (id) => profileMap[id] || "参加者";
+const avatarOf = (id) => ({ name: profileMap[id], avatar_path: avatarMap[id] });
 
 async function refreshMyPoints() {
   const { data } = await sb.from("profiles").select("points").eq("id", me.id).single();
@@ -749,33 +784,6 @@ function renderMyQR() {
 }
 
 /* 共通点マッチング(タグの一致で判定) */
-function renderMatches() {
-  const el = $("#match-list");
-  const mine = parseTags(me.tags).map(t => t.toLowerCase());
-  if (!mine.length) {
-    el.innerHTML = `<p class="empty">「わたし」タブで好きなこと・興味を登録すると、<br>共通点のある人がここに表示されます。</p>`;
-    return;
-  }
-  const matches = allProfiles
-    .filter(p => p.id !== me.id)
-    .map(p => {
-      const theirs = parseTags(p.tags);
-      const shared = theirs.filter(t => mine.includes(t.toLowerCase()));
-      return { p, shared };
-    })
-    .filter(m => m.shared.length > 0)
-    .sort((a, b) => b.shared.length - a.shared.length)
-    .slice(0, 10);
-  if (!matches.length) {
-    el.innerHTML = `<p class="empty">まだ共通点のある人が見つかりません。<br>参加者が増えると、ここに現れます。</p>`;
-    return;
-  }
-  el.innerHTML = matches.map(m => `
-    <div class="match-row">
-      <div class="match-name">${esc(m.p.name)}さん</div>
-      <div class="chips">${m.shared.map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>
-    </div>`).join("");
-}
 
 let scanner = null, scanning = false;
 function setupConnect() {
@@ -907,7 +915,6 @@ async function loadEvents() {
   renderEvents();
   if (hostMode) renderHostEvents();
   buildPhotoFolders();
-  loadPersonalAwards();
 }
 
 async function ensureNames(ids) {
@@ -1149,127 +1156,6 @@ async function renderHostEvents() {
   }));
 }
 
-/* ---------------- 贈る賞(参加者が自由につける〇〇賞) ---------------- */
-const AWARD_POINTS = 5;
-let myAssignments = [], receivedAwards = [];
-
-function awardEvent() {
-  const evs = eventsCache.filter(e => e.survey_open);
-  return evs.length ? evs[evs.length - 1] : null;   // 直近に終了した会
-}
-
-async function loadPersonalAwards() {
-  // もらった賞(全期間)
-  const { data: recv } = await sb.from("personal_awards").select("*")
-    .eq("to_id", me.id).order("created_at", { ascending: false });
-  receivedAwards = recv || [];
-  renderMyAwards();
-
-  const ev = awardEvent();
-  const area = $("#pawards-area");
-  if (!ev) {
-    myAssignments = [];
-    area.innerHTML = `<div class="card"><p class="empty">会が終わると、ここで賞を贈り合えます。<br>「〇〇で賞」を、あなたのことばで。</p></div>`;
-    if (hostMode) renderHostPawards();
-    return;
-  }
-  const { data: asg } = await sb.from("award_assignments").select("*")
-    .eq("event_id", ev.id).eq("giver_id", me.id);
-  myAssignments = asg || [];
-  const { data: sent } = await sb.from("personal_awards").select("to_id")
-    .eq("event_id", ev.id).eq("from_id", me.id);
-  const sentIds = new Set((sent || []).map(s => s.to_id));
-
-  area.innerHTML = `<div class="card">
-    <div style="font-size:13.5px;color:var(--muted);margin-bottom:10px">「${esc(ev.title)}」のふりかえり。ユーモアたっぷりの賞で、あの人を讃えよう。</div>
-    ${myAssignments.length ? `
-      <div style="font-size:12.5px;color:var(--gold);letter-spacing:.08em;margin-bottom:4px">あなたが賞を考える相手</div>
-      <div style="margin-bottom:12px">${myAssignments.map(a =>
-        `<button class="assign-chip ${a.done || sentIds.has(a.receiver_id) ? "done" : ""}" data-uid="${a.receiver_id}">✦ ${esc(nameOf(a.receiver_id))}さん</button>`).join("")}</div>` : ""}
-    <select id="paward-to">
-      <option value="">賞を贈る相手を選ぶ</option>
-      ${allProfiles.filter(p => p.id !== me.id).map(p =>
-        `<option value="${p.id}">${esc(p.name)}${sentIds.has(p.id) ? "(この会では贈り済み)" : ""}</option>`).join("")}
-    </select>
-    <input id="paward-title" type="text" maxlength="30" placeholder="賞の名前(例:場を一瞬であたためたで賞)" style="margin-top:8px">
-    <textarea id="paward-comment" rows="2" maxlength="200" placeholder="授与のことば(任意)" style="margin-top:8px"></textarea>
-    <div style="margin-top:12px"><button class="btn small" id="btn-paward">賞を贈る</button></div>
-  </div>`;
-
-  $$(".assign-chip").forEach(c => c.addEventListener("click", () => {
-    $("#paward-to").value = c.dataset.uid;
-    $("#paward-title").focus();
-  }));
-  $("#btn-paward").addEventListener("click", async () => {
-    const to = $("#paward-to").value;
-    const title = $("#paward-title").value.trim();
-    if (!to) return toast("贈る相手を選んでください");
-    if (!title) return toast("賞の名前を考えてみてください");
-    const { error } = await sb.from("personal_awards").insert({
-      event_id: ev.id, from_id: me.id, to_id: to,
-      title, comment: $("#paward-comment").value.trim(),
-    });
-    if (error) return toast("この会では、その方にすでに賞を贈っています");
-    await sb.rpc("add_points", { uid: to, amt: AWARD_POINTS });
-    await sb.from("award_assignments").update({ done: true })
-      .eq("event_id", ev.id).eq("giver_id", me.id).eq("receiver_id", to);
-    toast(`${nameOf(to)}さんに「${title}」を贈りました ✦`, 3500);
-    await loadPersonalAwards();
-  });
-  if (hostMode) renderHostPawards();
-}
-
-function renderMyAwards() {
-  const el = $("#my-awards");
-  if (!receivedAwards.length) {
-    el.innerHTML = `<p class="empty">まだ賞はありません。会が終わると贈り合いが始まります。</p>`;
-    return;
-  }
-  el.innerHTML = receivedAwards.map(a => `
-    <div class="paward">
-      <div class="paward-title">🏆 ${esc(a.title)}</div>
-      <div class="paward-from">${esc(nameOf(a.from_id))}さんより ・ ${fmtDate(a.created_at)}</div>
-      ${a.comment ? `<div class="paward-comment">${esc(a.comment)}</div>` : ""}
-    </div>`).join("");
-}
-
-async function renderHostPawards() {
-  const el = $("#host-pawards");
-  if (!hostMode) { el.innerHTML = ""; return; }
-  const ev = awardEvent();
-  if (!ev) { el.innerHTML = `<div class="card"><div class="section-h">主催者:贈る賞</div><p class="empty">会を終了すると、割り当てができるようになります</p></div>`; return; }
-
-  const { data: asgAll } = await sb.from("award_assignments").select("giver_id,receiver_id,done").eq("event_id", ev.id);
-  const { data: given } = await sb.from("personal_awards").select("to_id").eq("event_id", ev.id);
-  const receivedSet = new Set((given || []).map(g => g.to_id));
-  const nobody = allProfiles.filter(p => !receivedSet.has(p.id));
-
-  el.innerHTML = `<div class="card">
-    <div class="section-h">主催者:贈る賞</div>
-    ${(asgAll && asgAll.length)
-      ? `<p style="font-size:13.5px">割り当て済み:${asgAll.length}件(完了 ${asgAll.filter(a => a.done).length})</p>`
-      : `<button class="btn small" id="btn-assign">贈る相手を割り当てる(全員に行き渡ります)</button>
-         <p class="hint" style="margin-top:8px">全員がランダムに2人ずつ担当。誰も漏れない設計です。</p>`}
-    <div class="divider"></div>
-    <div class="section-h">まだ賞が届いていない人(${nobody.length})</div>
-    ${nobody.length ? `<p style="font-size:13.5px">${nobody.map(p => esc(p.name)).join("、")}</p>` : `<p class="empty">全員に賞が届いています ✦</p>`}
-  </div>`;
-
-  $("#btn-assign")?.addEventListener("click", async () => {
-    const ids = allProfiles.map(p => p.id);
-    if (ids.length < 2) return toast("参加者が2人未満です");
-    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    const n = ids.length;
-    const rows = [];
-    const shifts = n >= 3 ? [1, 2] : [1];   // 円環シフト:自分に当たらず全員が2つ受け取る
-    shifts.forEach(s => { for (let i = 0; i < n; i++) rows.push({ event_id: ev.id, giver_id: ids[i], receiver_id: ids[(i + s) % n] }); });
-    const { error } = await sb.from("award_assignments").upsert(rows, { onConflict: "event_id,giver_id,receiver_id", ignoreDuplicates: true });
-    if (error) return toast("割り当てに失敗しました");
-    toast(`割り当て完了:${rows.length}件。全員の画面に届きます ✦`, 3500);
-    await loadPersonalAwards();
-  });
-}
-
 /* ---------------- ことば(+感謝ポイント) ---------------- */
 async function sendNote(toId, kind, body) {
   // 同じ相手への今日1通目だけポイント付与(連投稼ぎ防止)
@@ -1449,103 +1335,7 @@ async function renderHostBingo() {
   });
 }
 
-/* ---------------- 〇〇賞 投票 ---------------- */
-function setupAwards() { /* イベントはrender内で付与 */ }
-async function loadAwards() {
-  const { data: awards } = await sb.from("awards").select("*").order("created_at", { ascending: false });
-  awardsCache = awards || [];
-  const { data: mv } = await sb.from("votes").select("award_id,target_id").eq("voter_id", me.id);
-  myVotes = {};
-  (mv || []).forEach(v => myVotes[v.award_id] = v.target_id);
-  await renderAwards();
-  if (hostMode) renderHostAwards();
-}
-async function renderAwards() {
-  const el = $("#awards-area");
-  if (!awardsCache.length) {
-    el.innerHTML = `<div class="card"><p class="empty">〇〇賞はまだありません。<br>会の後半に登場するかも。</p></div>`;
-    return;
-  }
-  const revealedIds = awardsCache.filter(a => a.status === "revealed").map(a => a.id);
-  let tally = {};
-  if (revealedIds.length) {
-    const { data: vs } = await sb.from("votes").select("award_id,target_id").in("award_id", revealedIds);
-    (vs || []).forEach(v => {
-      tally[v.award_id] = tally[v.award_id] || {};
-      tally[v.award_id][v.target_id] = (tally[v.award_id][v.target_id] || 0) + 1;
-    });
-  }
-  el.innerHTML = `<div class="card">` + awardsCache.map(a => {
-    if (a.status === "revealed") {
-      const rows = Object.entries(tally[a.id] || {}).sort((x, y) => y[1] - x[1]).slice(0, 3);
-      const inner = rows.length
-        ? rows.map(([tid, c], i) => `<div class="award-result-row"><span class="${i === 0 ? "award-winner" : ""}"><span class="rank-badge">${i + 1}</span> ${esc(nameOf(tid))}${i === 0 ? " ✦" : ""}</span><span style="color:var(--muted)">${c}票</span></div>`).join("")
-        : `<p class="empty">投票はありませんでした</p>`;
-      return `<div class="award-card"><div class="award-title">${esc(a.title)} — 結果発表</div>${inner}</div>`;
-    }
-    const votedFor = myVotes[a.id];
-    return `<div class="award-card">
-      <div class="award-title">${esc(a.title)}</div>
-      <select data-award="${a.id}" class="vote-select">
-        <option value="">この賞を贈る人を選ぶ</option>
-        ${allProfiles.filter(p => p.id !== me.id).map(p => `<option value="${p.id}" ${votedFor === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}
-      </select>
-      <div style="margin-top:10px"><button class="btn small vote-btn" data-award="${a.id}">${votedFor ? "投票を変更する" : "投票する"}</button></div>
-    </div>`;
-  }).join("") + `</div>`;
-
-  $$(".vote-btn").forEach(b => b.addEventListener("click", async () => {
-    const awardId = b.dataset.award;
-    const sel = document.querySelector(`.vote-select[data-award="${awardId}"]`);
-    const target = sel.value;
-    if (!target) return toast("贈る人を選んでください");
-    const { error } = await sb.from("votes").upsert(
-      { award_id: awardId, voter_id: me.id, target_id: target },
-      { onConflict: "award_id,voter_id" });
-    if (error) return toast("投票に失敗しました");
-    myVotes[awardId] = target;
-    toast(`「${nameOf(target)}さん」に投票しました ✦`);
-    renderAwards();
-  }));
-}
-async function renderHostAwards() {
-  const p = $("#host-awards");
-  p.innerHTML = `
-    <div class="card">
-      <div class="section-h">主催者:〇〇賞をつくる</div>
-      <input id="new-award-title" type="text" placeholder="例:いちばん笑わせてくれたで賞" maxlength="40">
-      <div style="margin-top:10px"><button class="btn small" id="btn-new-award">賞をつくる</button></div>
-      ${awardsCache.map(a => `
-        <div class="award-card" style="margin-top:12px">
-          <div class="award-title">${esc(a.title)}${a.status === "revealed" ? "(発表済み)" : ""}</div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            ${a.status === "open" ? `<button class="btn ghost small reveal-btn" data-award="${a.id}">結果を発表する</button>` : ""}
-            <button class="btn ghost small award-del-btn" data-award="${a.id}" data-title="${esc(a.title)}" style="border-color:var(--ember);color:var(--ember)">削除</button>
-          </div>
-        </div>`).join("")}
-    </div>`;
-  $("#btn-new-award")?.addEventListener("click", async () => {
-    const title = $("#new-award-title").value.trim();
-    if (!title) return toast("賞の名前を入れてください");
-    await sb.from("awards").insert({ title, status: "open" });
-    $("#new-award-title").value = "";
-    toast("賞をつくりました。全員の画面に届きます ✦");
-    await loadAwards();
-  });
-  $$(".reveal-btn").forEach(b => b.addEventListener("click", async () => {
-    if (!confirm("結果を発表しますか?(全員に公開されます)")) return;
-    await sb.from("awards").update({ status: "revealed" }).eq("id", b.dataset.award);
-    await loadAwards();
-  }));
-  $$(".award-del-btn").forEach(b => b.addEventListener("click", async () => {
-    if (!confirm(`「${b.dataset.title}」を削除しますか?\n投票の記録もすべて消えます。元に戻せません。`)) return;
-    await sb.from("awards").delete().eq("id", b.dataset.award);
-    toast("賞を削除しました");
-    await loadAwards();
-  }));
-}
-
-/* ---------------- アルバム ---------------- */
+/* ---------------- みんな(投稿フィード) ---------------- */
 let postPhotoFile = null;
 function setupPosts() {
   $("#btn-post-photo").addEventListener("click", () => $("#post-photo-input").click());
@@ -1575,23 +1365,38 @@ function setupPosts() {
   });
 }
 async function loadPosts() {
-  const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
+  const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(200);
   const el = $("#posts-list");
   if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ投稿はありません。最初の一言をぜひ。</p>`; return; }
-  el.innerHTML = data.map(p => `
-    <div class="post-item">
+  const pinned = data.filter(p => p.pinned);
+  const rest = data.filter(p => !p.pinned);
+  const ordered = [...pinned, ...rest];
+  el.innerHTML = ordered.map(p => `
+    <div class="post-item ${p.pinned ? "pinned" : ""}">
       <div class="note-meta">
+        ${p.pinned ? `<span class="pin-tag">📌 主催者より</span>` : ""}
+        <span style="cursor:pointer" class="post-author" data-uid="${p.user_id}">${avatarHtml(avatarOf(p.user_id), 26)}</span>
         <span>${esc(nameOf(p.user_id))}さん</span><span>・${fmtDate(p.created_at)}</span>
-        ${(p.user_id === me.id || hostMode) ? `<button class="post-del" data-id="${p.id}" data-path="${p.photo_path || ""}">削除</button>` : ""}
+        <span style="margin-left:auto;display:flex;gap:10px">
+          ${hostMode ? `<button class="post-pin" data-id="${p.id}" data-pin="${p.pinned ? 0 : 1}">${p.pinned ? "ピン解除" : "ピン留め"}</button>` : ""}
+          ${(p.user_id === me.id || hostMode) ? `<button class="post-del" data-id="${p.id}" data-path="${p.photo_path || ""}">削除</button>` : ""}
+        </span>
       </div>
       ${p.body ? `<div class="note-body">${esc(p.body)}</div>` : ""}
       ${p.photo_path ? `<img class="post-img" loading="lazy" src="${photoUrl(p.photo_path)}" alt="投稿写真">` : ""}
     </div>`).join("");
+  el.querySelectorAll(".post-author").forEach(a => a.addEventListener("click", () => showProfile(a.dataset.uid)));
   el.querySelectorAll(".post-del").forEach(b => b.addEventListener("click", async () => {
     if (!confirm("この投稿を削除しますか?")) return;
     await sb.from("posts").delete().eq("id", b.dataset.id);
     if (b.dataset.path) { try { await sb.storage.from("photos").remove([b.dataset.path]); } catch (e) {} }
     toast("削除しました");
+    await loadPosts();
+  }));
+  el.querySelectorAll(".post-pin").forEach(b => b.addEventListener("click", async () => {
+    const { error } = await sb.from("posts").update({ pinned: b.dataset.pin === "1" }).eq("id", b.dataset.id);
+    if (error) return toast("ピン機能はまだ準備中です(SQLの実行が必要)", 4000);
+    toast(b.dataset.pin === "1" ? "ピン留めしました 📌" : "ピンを解除しました");
     await loadPosts();
   }));
   el.querySelectorAll(".post-img").forEach(img => img.addEventListener("click", () => {
@@ -1602,7 +1407,7 @@ async function loadPosts() {
     $("#lightbox").classList.add("active");
   }));
 }
-let lbCurrent = null;
+
 function setupPhotos() {
   $("#btn-photo").addEventListener("click", () => $("#photo-input").click());
   $("#photo-input").addEventListener("change", onPhotoPicked);
@@ -1774,6 +1579,10 @@ function renderMe() {
   $("#me-points").textContent = me.points;
   $("#me-name").value = me.name;
   $("#me-bio").value = me.bio || "";
+  const av = $("#avatar-preview");
+  if (av) av.outerHTML = me.avatar_path
+    ? `<img id="avatar-preview" class="avatar" src="${photoUrl(me.avatar_path)}" style="width:96px;height:96px" alt="me">`
+    : `<div id="avatar-preview" class="avatar-ph" style="width:96px;height:96px;font-size:32px">${esc((me.name||"?").charAt(0))}</div>`;
   const curTags = parseTags(me.tags);
   buildTagPicker("me-tagpick", curTags);
   $("#me-tags").value = curTags.filter(t => !INTEREST_TAGS.includes(t)).join("、");
@@ -1797,10 +1606,20 @@ function setupMe() {
     const bio = $("#me-bio").value.trim();
     const tags = combineTags("me-tagpick", "me-tags");
     const intro = $("#me-intro").value.trim();
-    const { error } = await sb.from("profiles").update({ name, bio, tags, intro }).eq("id", me.id);
-    if (error) return toast("保存に失敗しました");
-    me.name = name; me.bio = bio; me.tags = tags; me.intro = intro;
-    renderMyQR(); await loadProfiles(); renderMatches();
+    let avatar_path = me.avatar_path || null;
+    if (avatarFile) {
+      try {
+        const blob = await cropToSquareJpeg(avatarFile);
+        avatar_path = `avatar_${me.id}_${Date.now()}.jpg`;
+        const { error: upErr } = await sb.storage.from("photos").upload(avatar_path, blob, { contentType: "image/jpeg" });
+        if (upErr) throw upErr;
+      } catch (err) { toast("アイコンのアップに失敗しました", 3500); return; }
+    }
+    const { error } = await sb.from("profiles").update({ name, bio, tags, intro, avatar_path }).eq("id", me.id);
+    if (error) return toast("保存に失敗しました(アイコン機能はSQL実行が必要かもしれません)", 4000);
+    me.name = name; me.bio = bio; me.tags = tags; me.intro = intro; me.avatar_path = avatar_path;
+    avatarFile = null;
+    renderMyQR(); await loadProfiles();
     toast("保存しました ✦");
   });
 }
@@ -1809,7 +1628,7 @@ function setupHost() {
     if (hostMode) {
       hostMode = false;
       document.body.classList.remove("is-host");
-      $("#host-bingo").innerHTML = ""; $("#host-awards").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-pawards").innerHTML = ""; $("#host-members").innerHTML = "";
+      $("#host-bingo").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-members").innerHTML = "";
       loadSongs(); loadPosts();
       return toast("主催者モードを終了しました");
     }
@@ -1817,7 +1636,7 @@ function setupHost() {
     if (pin !== CONFIG.HOST_PIN) { if (pin !== null) toast("PINが違います"); return; }
     hostMode = true;
     document.body.classList.add("is-host");
-    renderHostBingo(); renderHostAwards(); renderHostEvents(); renderHostPawards(); renderHostMembers(); loadSongs(); loadPosts();
+    renderHostBingo(); renderHostEvents(); renderHostMembers(); loadSongs(); loadPosts();
     toast("主催者モードON:あそぶ・ひろばに進行パネルが出ています");
   });
 }
@@ -1855,19 +1674,20 @@ async function renderHostMembers() {
     const { error } = await sb.from("profiles").delete().eq("id", b.dataset.id);
     if (error) return toast("削除に失敗しました");
     toast(`「${b.dataset.name}」を削除しました`);
-    await loadProfiles(); renderMatches();
+    await loadProfiles();
     await Promise.all([loadLeaderboard(), loadEvents()]);
     renderHostMembers();
   }));
 }
 async function loadLeaderboard() {
-  const { data } = await sb.from("profiles").select("id,name,points")
+  const { data } = await sb.from("profiles").select("id,name,points,avatar_path")
     .order("points", { ascending: false }).limit(10);
   const el = $("#leaderboard");
   if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ誰もいません</p>`; return; }
   el.innerHTML = data.map((p, i) => `
     <div class="lb-row tappable" data-uid="${p.id}">
       <span class="rank-badge">${i + 1}</span>
+      ${avatarHtml(p, 30)}
       <span>${esc(p.name)}${p.id === me.id ? " (あなた)" : ""}</span>
       <span class="pt">${p.points}</span>
     </div>`).join("");
@@ -1905,23 +1725,6 @@ function subscribeRealtime() {
     .on("postgres_changes",
       { event: "INSERT", schema: "public", table: "bingo_games" },
       () => loadBingo())
-    .subscribe();
-
-  sb.channel("awards-live")
-    .on("postgres_changes",
-      { event: "*", schema: "public", table: "awards" },
-      () => loadAwards())
-    .subscribe();
-
-  sb.channel("pawards-in")
-    .on("postgres_changes",
-      { event: "INSERT", schema: "public", table: "personal_awards", filter: `to_id=eq.${me.id}` },
-      async (payload) => {
-        if (!profileMap[payload.new.from_id]) await loadProfiles();
-        toast(`${nameOf(payload.new.from_id)}さんから「${payload.new.title}」が届きました 🏆`, 4500);
-        await loadPersonalAwards();
-        await refreshMyPoints();
-      })
     .subscribe();
 
   sb.channel("events-live")
