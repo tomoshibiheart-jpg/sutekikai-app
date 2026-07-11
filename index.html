@@ -59,7 +59,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .screen.active{display:block}
 
 /* ---------- onboarding ---------- */
-#onboarding{display:none;flex-direction:column;justify-content:center;padding:36px 28px calc(36px + env(safe-area-inset-bottom));min-height:100dvh;max-width:480px;margin:0 auto}
+#onboarding{display:none;flex-direction:column;justify-content:center;padding:calc(36px + env(safe-area-inset-top)) 28px calc(36px + env(safe-area-inset-bottom));min-height:100dvh;max-width:480px;margin:0 auto}
 #onboarding.active{display:flex}
 .brand-mark{font-size:44px;line-height:1.3;color:var(--gold);margin-bottom:8px;font-family:"Shippori Mincho",serif;font-weight:700}
 .brand-sub{color:var(--muted);font-size:13px;letter-spacing:.18em;margin-bottom:40px}
@@ -69,7 +69,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 /* ---------- app frame ---------- */
 #app{display:none}
 #app.active{display:block}
-.page{display:none;padding:24px 20px calc(96px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
+.page{display:none;padding:calc(28px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto}
 .page.active{display:block}
 .page-title{font-size:24px;color:var(--gold);margin-bottom:4px}
 .page-lead{font-size:12.5px;color:var(--muted);margin-bottom:22px}
@@ -116,7 +116,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 #scanner-view.active{display:flex}
 #qr-reader{flex:1;overflow:hidden}
 #qr-reader video{object-fit:cover}
-.scanner-bar{padding:16px 20px calc(16px + env(safe-area-inset-bottom));background:var(--bg);text-align:center}
+.scanner-bar{padding:calc(16px + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom));background:var(--bg);text-align:center}
 
 /* ---------- signature: connection overlay ---------- */
 #connect-overlay{
