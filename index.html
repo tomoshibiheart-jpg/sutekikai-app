@@ -468,10 +468,6 @@ body.is-host .host-badge{display:block}
       <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
     </div>
     <div class="card">
-      <div class="section-h">素敵ポイント ランキング</div>
-      <div id="leaderboard"><p class="empty">読み込み中…</p></div>
-    </div>
-    <div class="card">
       <div class="section-h">会員のみなさん</div>
       <p class="hint" style="margin-bottom:6px">登録順に100名ずつ、〇期生としてお迎えしています。名前をタップするとプロフィールが見られます。</p>
       <div id="members-all"><p class="empty">読み込み中…</p></div>
@@ -712,7 +708,7 @@ async function enterApp() {
   const safe = (fn) => Promise.resolve().then(fn).catch(report);
   await Promise.all([
     safe(loadNotes), safe(loadBingo), safe(loadPhotos),
-    safe(loadSongs), safe(loadLeaderboard), safe(loadMembersAll), safe(loadEvents), safe(loadPosts),
+    safe(loadSongs), safe(loadMembersAll), safe(loadEvents), safe(loadPosts),
   ]);
   try { subscribeRealtime(); } catch (e) { report(e); }
 }
@@ -851,7 +847,7 @@ function setupTabs() {
     if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
     if (b.dataset.page === "feed") { loadPosts(); }
     if (b.dataset.page === "play") { }
-    if (b.dataset.page === "me") { loadLeaderboard(); refreshMyPoints(); }
+    if (b.dataset.page === "me") { loadMembersAll(); refreshMyPoints(); }
     if (b.dataset.page === "connect") { loadProfiles(); }
   }));
 }
@@ -1809,7 +1805,7 @@ async function renderHostMembers() {
     if (error) return toast("削除に失敗しました");
     toast(`「${b.dataset.name}」を削除しました`);
     await loadProfiles();
-    await Promise.all([loadLeaderboard(), loadMembersAll(), loadEvents()]);
+    await Promise.all([loadMembersAll(), loadEvents()]);
     renderHostMembers();
   }));
 }
@@ -1841,21 +1837,6 @@ async function loadMembersAll() {
         <span class="mem-no">#${p.no} ・ ${p.points}pt</span>
       </div>`).join("")}`).join("");
   el.querySelectorAll(".mem-row").forEach(r => r.addEventListener("click", () => showProfile(r.dataset.uid)));
-}
-async function loadLeaderboard() {
-  const { data } = await sb.from("profiles").select("id,name,points,avatar_path")
-    .order("points", { ascending: false }).limit(10);
-  const el = $("#leaderboard");
-  if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ誰もいません</p>`; return; }
-  el.innerHTML = data.map((p, i) => `
-    <div class="lb-row tappable" data-uid="${p.id}">
-      <span class="rank-badge">${i + 1}</span>
-      ${avatarHtml(p, 30)}
-      <span>${esc(p.name)}${p.id === me.id ? " (あなた)" : ""}</span>
-      ${genLabel(p.id) ? `<span class="gen-badge" style="font-size:9.5px;padding:1px 7px">${genLabel(p.id)}</span>` : ""}
-      <span class="pt">${p.points}</span>
-    </div>`).join("");
-  el.querySelectorAll(".lb-row").forEach(r => r.addEventListener("click", () => showProfile(r.dataset.uid)));
 }
 
 /* ---------------- リアルタイム ---------------- */
