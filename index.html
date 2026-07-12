@@ -299,6 +299,22 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .avatar-edit{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px}
 #avatar-preview{width:96px;height:96px}
 
+/* ---------- post reactions ---------- */
+.post-actions{display:flex;align-items:center;gap:16px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.act-btn{background:none;padding:4px 2px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.act-btn.on{color:var(--gold-bright)}
+.act-btn .cnt{font-size:12px}
+.cmt-wrap{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.cmt-wrap.open{display:block}
+.cmt-item{display:flex;gap:9px;padding:7px 0;align-items:flex-start}
+.cmt-body{flex:1}
+.cmt-name{font-size:12px;color:var(--gold)}
+.cmt-text{font-size:13.5px;line-height:1.6;margin-top:2px;white-space:pre-wrap}
+.cmt-del{background:none;color:var(--ember);font-size:11px;padding:0}
+.cmt-form{display:flex;gap:8px;margin-top:8px;align-items:center}
+.cmt-form input{flex:1;margin:0}
+.likers{font-size:11.5px;color:var(--muted);margin-top:7px}
+
 /* ---------- posts ---------- */
 .post-item{padding:14px 0;border-bottom:1px solid var(--line)}
 .post-item:last-child{border-bottom:none}
@@ -1466,6 +1482,7 @@ async function renderHostBingo() {
 
 /* ---------------- みんな(投稿フィード) ---------------- */
 let postPhotoFile = null;
+let openCommentAfterLoad = null;
 function setupPosts() {
   $("#btn-post-photo").addEventListener("click", () => $("#post-photo-input").click());
   $("#post-photo-input").addEventListener("change", (e) => {
@@ -1494,13 +1511,28 @@ function setupPosts() {
   });
 }
 async function loadPosts() {
-  const { data } = await sb.from("posts").select("*").order("created_at", { ascending: false }).limit(200);
+  const [{ data }, likesRes, cmtsRes] = await Promise.all([
+    sb.from("posts").select("*").order("created_at", { ascending: false }).limit(200),
+    sb.from("post_likes").select("*"),
+    sb.from("post_comments").select("*").order("created_at", { ascending: true }),
+  ]);
+  const likes = likesRes.data || [];
+  const cmts = cmtsRes.data || [];
   const el = $("#posts-list");
   if (!data || !data.length) { el.innerHTML = `<p class="empty">まだ投稿はありません。最初の一言をぜひ。</p>`; return; }
+
+  const likesOf = (pid) => likes.filter(l => l.post_id === pid);
+  const cmtsOf = (pid) => cmts.filter(x => x.post_id === pid);
+
   const pinned = data.filter(p => p.pinned);
   const rest = data.filter(p => !p.pinned);
   const ordered = [...pinned, ...rest];
-  el.innerHTML = ordered.map(p => `
+  el.innerHTML = ordered.map(p => {
+    const ls = likesOf(p.id);
+    const iLiked = ls.some(l => l.user_id === me.id);
+    const cs = cmtsOf(p.id);
+    const likerNames = ls.slice(0, 3).map(l => esc(nameOf(l.user_id))).join("、");
+    return `
     <div class="post-item ${p.pinned ? "pinned" : ""}">
       <div class="note-meta">
         ${p.pinned ? `<span class="pin-tag">📌 主催者より</span>` : ""}
@@ -1513,8 +1545,34 @@ async function loadPosts() {
       </div>
       ${p.body ? `<div class="note-body">${esc(p.body)}</div>` : ""}
       ${p.photo_path ? `<img class="post-img" loading="lazy" src="${photoUrl(p.photo_path)}" alt="投稿写真">` : ""}
-    </div>`).join("");
-  el.querySelectorAll(".post-author").forEach(a => a.addEventListener("click", () => showProfile(a.dataset.uid)));
+      ${ls.length ? `<div class="likers">✦ ${likerNames}${ls.length > 3 ? ` ほか${ls.length - 3}名` : ""} が素敵と思っています</div>` : ""}
+      <div class="post-actions">
+        <button class="act-btn like-btn ${iLiked ? "on" : ""}" data-id="${p.id}" data-liked="${iLiked ? 1 : 0}">
+          ${iLiked ? "✦" : "✧"} 素敵 <span class="cnt">${ls.length || ""}</span>
+        </button>
+        <button class="act-btn cmt-toggle" data-id="${p.id}">
+          💬 コメント <span class="cnt">${cs.length || ""}</span>
+        </button>
+      </div>
+      <div class="cmt-wrap" id="cw-${p.id}">
+        ${cs.map(x => `
+          <div class="cmt-item">
+            <span style="cursor:pointer" class="cmt-author" data-uid="${x.user_id}">${avatarHtml(avatarOf(x.user_id), 26)}</span>
+            <div class="cmt-body">
+              <div class="cmt-name">${esc(nameOf(x.user_id))}さん <span style="color:var(--muted);font-size:11px">・${fmtDate(x.created_at)}</span></div>
+              <div class="cmt-text">${esc(x.body)}</div>
+            </div>
+            ${(x.user_id === me.id || hostMode) ? `<button class="cmt-del" data-cid="${x.id}">削除</button>` : ""}
+          </div>`).join("")}
+        <div class="cmt-form">
+          <input class="cmt-input" data-id="${p.id}" maxlength="300" placeholder="コメントを書く…">
+          <button class="btn small cmt-send" data-id="${p.id}">送る</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  el.querySelectorAll(".post-author, .cmt-author").forEach(a => a.addEventListener("click", () => showProfile(a.dataset.uid)));
   el.querySelectorAll(".post-del").forEach(b => b.addEventListener("click", async () => {
     if (!confirm("この投稿を削除しますか?")) return;
     await sb.from("posts").delete().eq("id", b.dataset.id);
@@ -1528,6 +1586,45 @@ async function loadPosts() {
     toast(b.dataset.pin === "1" ? "ピン留めしました 📌" : "ピンを解除しました");
     await loadPosts();
   }));
+  // いいね
+  el.querySelectorAll(".like-btn").forEach(b => b.addEventListener("click", async () => {
+    const pid = b.dataset.id;
+    if (b.dataset.liked === "1") {
+      const { error } = await sb.from("post_likes").delete().eq("post_id", pid).eq("user_id", me.id);
+      if (error) return toast("いいね機能はまだ準備中です(SQLの実行が必要)", 4000);
+    } else {
+      const { error } = await sb.from("post_likes").insert({ post_id: pid, user_id: me.id });
+      if (error) return toast("いいね機能はまだ準備中です(SQLの実行が必要)", 4000);
+    }
+    await loadPosts();
+  }));
+  // コメント開閉
+  el.querySelectorAll(".cmt-toggle").forEach(b => b.addEventListener("click", () => {
+    $("#cw-" + b.dataset.id).classList.toggle("open");
+  }));
+  // コメント送信
+  const sendCmt = async (pid, input) => {
+    const body = input.value.trim();
+    if (!body) return;
+    const { error } = await sb.from("post_comments").insert({ post_id: pid, user_id: me.id, body });
+    if (error) return toast("コメント機能はまだ準備中です(SQLの実行が必要)", 4000);
+    input.value = "";
+    openCommentAfterLoad = pid;
+    await loadPosts();
+  };
+  el.querySelectorAll(".cmt-send").forEach(b => b.addEventListener("click", () => {
+    const input = el.querySelector(`.cmt-input[data-id="${b.dataset.id}"]`);
+    sendCmt(b.dataset.id, input);
+  }));
+  el.querySelectorAll(".cmt-input").forEach(inp => inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); sendCmt(inp.dataset.id, inp); }
+  }));
+  // コメント削除
+  el.querySelectorAll(".cmt-del").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("このコメントを削除しますか?")) return;
+    await sb.from("post_comments").delete().eq("id", b.dataset.cid);
+    await loadPosts();
+  }));
   el.querySelectorAll(".post-img").forEach(img => img.addEventListener("click", () => {
     lbCurrent = null;
     $("#lb-img").src = img.src;
@@ -1535,6 +1632,12 @@ async function loadPosts() {
     $("#lb-del").style.display = "none";
     $("#lightbox").classList.add("active");
   }));
+  // コメント送信後は開いたままにする
+  if (openCommentAfterLoad) {
+    const w = $("#cw-" + openCommentAfterLoad);
+    if (w) w.classList.add("open");
+    openCommentAfterLoad = null;
+  }
 }
 
 function setupPhotos() {
@@ -1882,9 +1985,9 @@ function subscribeRealtime() {
     .subscribe();
 
   sb.channel("posts-live")
-    .on("postgres_changes",
-      { event: "INSERT", schema: "public", table: "posts" },
-      () => loadPosts())
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => loadPosts())
+    .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, () => loadPosts())
+    .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, () => loadPosts())
     .subscribe();
 
   sb.channel("songs-live")
