@@ -26,7 +26,7 @@
   --radius:16px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+html,body{height:100%;overscroll-behavior-y:none}
 body{
   background:var(--bg); color:var(--cream);
   font-family:"Zen Kaku Gothic New",-apple-system,sans-serif;
@@ -226,7 +226,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 #lightbox .lb-meta{color:var(--muted);font-size:12.5px}
 
 /* ---------- events ---------- */
-.event-thumb{width:100%;border-radius:12px;margin-bottom:10px;aspect-ratio:16/9;object-fit:cover;background:var(--surface2)}
+.event-thumb{width:100%;border-radius:12px;margin-bottom:10px;aspect-ratio:1/1;object-fit:cover;background:var(--surface2)}
 .event-title{font-family:"Shippori Mincho",serif;font-size:18px;color:var(--gold-bright)}
 .event-meta{font-size:13px;color:var(--muted);margin:4px 0 8px}
 .rsvp-row{display:flex;gap:8px;margin-top:12px}
@@ -484,6 +484,11 @@ body.is-host .host-badge{display:block}
       <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
     </div>
     <div class="card">
+      <div class="section-h">お知らせ通知</div>
+      <p class="hint" id="push-status" style="margin-bottom:10px">新しい会のお知らせを、スマホの通知で受け取れます。</p>
+      <button class="btn ghost small" id="btn-push">通知を受け取る</button>
+    </div>
+    <div class="card">
       <div class="section-h">会員のみなさん</div>
       <p class="hint" style="margin-bottom:6px">登録順に100名ずつ、〇期生としてお迎えしています。名前をタップするとプロフィールが見られます。</p>
       <div id="members-all"><p class="empty">読み込み中…</p></div>
@@ -593,6 +598,7 @@ const CONFIG = {
   SUPABASE_URL: "https://dtywrdijeqaysbjzynsa.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_H_1OxbbyJ7qYQbCS4EuCvw_09AxiYGL",   // ★ここだけ: sb_publishable_で始まるキーに置き換え
   HOST_PIN: "0628",
+  VAPID_PUBLIC_KEY: "BAiHqwkj8ZkJ7NAE-EYsM5hKn4VIsQegzecAOF-hMjCoHF9-NP9SHVsopQPdRkjNHDO09MvhlCMTIHKUC8qxiKY",
   GRATITUDE_POINTS: 3,                       // ことばを受け取った人に入るポイント
 };
 
@@ -717,7 +723,17 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); setupPush(); } catch (e) { report(e); }
+  // アプリ使用中に更新された場合は、見ていたタブに留まる
+  // (sessionStorageはアプリを閉じると消えるため、次回起動時は「つながる」から始まる)
+  try {
+    const t = sessionStorage.getItem(TAB_KEY);
+    if (t && t !== "connect") {
+      const btn = document.querySelector(`.tabbar button[data-page="${t}"]`);
+      if (btn) btn.click();
+    }
+  } catch (e) {}
+
   try { renderMyQR(); } catch (e) { report(e); }
   try { renderMe(); } catch (e) { report(e); }
   try { await loadProfiles(); } catch (e) { report(e); }
@@ -752,6 +768,92 @@ async function cropToSquareJpeg(file, dim = 400, quality = 0.85) {
   URL.revokeObjectURL(url);
   return new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
 }
+/* ---------------- プッシュ通知 ---------------- */
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+const isStandalone = () =>
+  window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+async function refreshPushStatus() {
+  const st = $("#push-status"), btn = $("#btn-push");
+  if (!st || !btn) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (isIOS && !isStandalone()) {
+      st.textContent = "通知を受け取るには、共有ボタンから「ホーム画面に追加」して、そこから開いてください。";
+      btn.style.display = "none";
+      return;
+    }
+    st.textContent = "このブラウザは通知に対応していません。";
+    btn.style.display = "none";
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub && Notification.permission === "granted") {
+      st.textContent = "通知はオンです ✦ 新しい会のお知らせが届きます。";
+      btn.textContent = "通知をとめる";
+      btn.dataset.on = "1";
+    } else {
+      st.textContent = "新しい会のお知らせを、スマホの通知で受け取れます。";
+      btn.textContent = "通知を受け取る";
+      btn.dataset.on = "0";
+    }
+    btn.style.display = "inline-flex";
+  } catch (e) {
+    st.textContent = "通知の状態を確認できませんでした。";
+  }
+}
+function setupPush() {
+  const btn = $("#btn-push");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && !isStandalone()) {
+      return toast("共有ボタンから「ホーム画面に追加」し、そのアイコンから開いてください", 5000);
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (btn.dataset.on === "1") {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+          await sub.unsubscribe();
+        }
+        toast("通知をとめました");
+        await refreshPushStatus();
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return toast("通知が許可されませんでした", 4000);
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY),
+      });
+      const j = sub.toJSON();
+      const { error } = await sb.from("push_subscriptions").upsert({
+        user_id: me.id,
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth: j.keys.auth,
+      }, { onConflict: "endpoint" });
+      if (error) { toast("通知の登録に失敗しました(SQLの実行が必要かもしれません)", 5000); return; }
+      toast("通知をオンにしました ✦");
+      await refreshPushStatus();
+    } catch (e) {
+      toast("通知の設定に失敗しました", 4000);
+    }
+  });
+  refreshPushStatus();
+}
+
 let avatarFile = null;
 function setupAvatar() {
   $("#btn-avatar").addEventListener("click", () => $("#avatar-input").click());
@@ -853,10 +955,12 @@ async function showProfile(userId) {
     <div style="margin-top:20px"><button class="btn ghost" onclick="document.getElementById('profile-modal').classList.remove('active')">とじる</button></div>`;
   $("#profile-modal").classList.add("active");
 }
+const TAB_KEY = "sutekikai_tab_session";
 function setupTabs() {
   $$(".tabbar button").forEach(b => b.addEventListener("click", () => {
     $$(".tabbar button").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
+    try { sessionStorage.setItem(TAB_KEY, b.dataset.page); } catch (e) {}
     $$(".page").forEach(p => p.classList.remove("active"));
     $("#page-" + b.dataset.page).classList.add("active");
     // タブを開いたときに軽く更新
@@ -1272,6 +1376,24 @@ async function renderHostEvents() {
       status: "upcoming",
     });
     if (insErr) { toast("会の作成に失敗しました。通信環境を確認してください", 4000); return; }
+    // お知らせを「みんな」タブに自動ピン留め(全員の目に届く)
+    const when = dateVal ? fmtEventDate(new Date(dateVal).toISOString()) : "日時未定";
+    const venue = $("#ev-venue").value.trim();
+    try {
+      const body = `【新しい会のお知らせ】\n${title}\n${when}${venue ? "\n" + venue : ""}\n\nひろばタブから出欠のお返事をお願いします ✦`;
+      await sb.from("posts").insert({ user_id: me.id, body, photo_path: thumb_path, pinned: true });
+    } catch (e) {}
+    // 全員のスマホにプッシュ通知
+    try {
+      await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          title: "素敵会 ・ 新しい会のお知らせ",
+          body: `${title}\n${when}${venue ? " / " + venue : ""}`,
+        }),
+      });
+    } catch (e) {}
     $("#ev-title").value = ""; $("#ev-venue").value = ""; $("#ev-date").value = ""; $("#ev-desc").value = "";
     $("#ev-thumb-name").textContent = "";
     evThumbFile = null;
@@ -1510,7 +1632,11 @@ function setupPosts() {
     } catch (e) { toast("投稿に失敗しました。通信環境を確認してください", 4000); }
   });
 }
-async function loadPosts() {
+async function loadPosts(keepScroll = false) {
+  const scrollY = keepScroll ? window.scrollY : null;
+  const openIds = keepScroll
+    ? [...document.querySelectorAll(".cmt-wrap.open")].map(w => w.id)
+    : [];
   const [{ data }, likesRes, cmtsRes] = await Promise.all([
     sb.from("posts").select("*").order("created_at", { ascending: false }).limit(200),
     sb.from("post_likes").select("*"),
@@ -1596,7 +1722,7 @@ async function loadPosts() {
       const { error } = await sb.from("post_likes").insert({ post_id: pid, user_id: me.id });
       if (error) return toast("いいね機能はまだ準備中です(SQLの実行が必要)", 4000);
     }
-    await loadPosts();
+    await loadPosts(true);
   }));
   // コメント開閉
   el.querySelectorAll(".cmt-toggle").forEach(b => b.addEventListener("click", () => {
@@ -1610,7 +1736,7 @@ async function loadPosts() {
     if (error) return toast("コメント機能はまだ準備中です(SQLの実行が必要)", 4000);
     input.value = "";
     openCommentAfterLoad = pid;
-    await loadPosts();
+    await loadPosts(true);
   };
   el.querySelectorAll(".cmt-send").forEach(b => b.addEventListener("click", () => {
     const input = el.querySelector(`.cmt-input[data-id="${b.dataset.id}"]`);
@@ -1623,7 +1749,7 @@ async function loadPosts() {
   el.querySelectorAll(".cmt-del").forEach(b => b.addEventListener("click", async () => {
     if (!confirm("このコメントを削除しますか?")) return;
     await sb.from("post_comments").delete().eq("id", b.dataset.cid);
-    await loadPosts();
+    await loadPosts(true);
   }));
   el.querySelectorAll(".post-img").forEach(img => img.addEventListener("click", () => {
     lbCurrent = null;
@@ -1632,12 +1758,15 @@ async function loadPosts() {
     $("#lb-del").style.display = "none";
     $("#lightbox").classList.add("active");
   }));
-  // コメント送信後は開いたままにする
+  // 開いていたコメント欄を復元
+  openIds.forEach(id => { const w = document.getElementById(id); if (w) w.classList.add("open"); });
   if (openCommentAfterLoad) {
     const w = $("#cw-" + openCommentAfterLoad);
     if (w) w.classList.add("open");
     openCommentAfterLoad = null;
   }
+  // スクロール位置を維持(いいね・コメント時に画面が飛ばない)
+  if (scrollY !== null) window.scrollTo({ top: scrollY, behavior: "instant" });
 }
 
 function setupPhotos() {
@@ -1985,9 +2114,9 @@ function subscribeRealtime() {
     .subscribe();
 
   sb.channel("posts-live")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => loadPosts())
-    .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, () => loadPosts())
-    .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, () => loadPosts())
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => loadPosts(true))
+    .on("postgres_changes", { event: "*", schema: "public", table: "post_likes" }, () => loadPosts(true))
+    .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, () => loadPosts(true))
     .subscribe();
 
   sb.channel("songs-live")
