@@ -825,9 +825,11 @@ function setupPush() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ title: "素敵会 ・ テスト通知", body: "この通知が見えていれば、設定は完了です ✦" }),
       });
-      const j = await r.json();
+      const raw = await r.text();
+      let j = {};
+      try { j = JSON.parse(raw); } catch (e) {}
       if (j.ok) toast(`送信完了:${j.sent}台に届けました(通知オンの端末数)`, 6000);
-      else toast(`送信エラー:${j.error || "Edge Functionの設定を確認してください"}`, 6000);
+      else toast(`診断情報 [HTTP ${r.status}] ${raw.slice(0, 180)}`, 12000);
     } catch (e) {
       toast("送信できませんでした。Edge Function(send-push)が未設定の可能性があります", 6000);
     }
