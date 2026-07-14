@@ -835,7 +835,10 @@ function setupPush() {
       const raw = await r.text();
       let j = {};
       try { j = JSON.parse(raw); } catch (e) {}
-      if (j.ok) toast(`送信完了:${j.sent}台に届けました(通知オンの端末数)`, 6000);
+      if (j.ok) {
+        if (j.total === 0) toast("登録済みの端末が0台です。iPhoneの「通知を受け取る」を押し直してください", 8000);
+        else toast(`送信完了:${j.sent}/${j.total}台に届けました${j.firstError ? " ・ エラー: " + j.firstError : ""}`, 12000);
+      }
       else toast(`診断情報 [HTTP ${r.status}] ${raw.slice(0, 180)}`, 12000);
     } catch (e) {
       toast("送信できませんでした。Edge Function(send-push)が未設定の可能性があります", 6000);
