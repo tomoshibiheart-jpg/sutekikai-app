@@ -72,45 +72,90 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
   align-items:center;justify-content:center;overflow:hidden;
   padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
   background:
-    radial-gradient(circle at 50% 35%,rgba(228,184,98,.13),transparent 34%),
+    radial-gradient(circle at 50% 38%,rgba(228,184,98,.14),transparent 34%),
     linear-gradient(180deg,#17131c 0%,#1d1724 100%);
   text-align:center;
 }
 #welcome.active{display:flex}
-.welcome-inner{position:relative;z-index:2;width:100%;max-width:430px}
+.welcome-scene{
+  position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+  padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+  transition:opacity .85s ease,transform .85s cubic-bezier(.22,.7,.2,1),visibility .85s;
+}
+.welcome-intro{opacity:1;visibility:visible;transform:scale(1)}
+.welcome-detail{opacity:0;visibility:hidden;transform:translateY(18px) scale(.985);pointer-events:none}
+#welcome.phase-detail .welcome-intro{opacity:0;visibility:hidden;transform:scale(1.06);pointer-events:none}
+#welcome.phase-detail .welcome-detail{opacity:1;visibility:visible;transform:translateY(0) scale(1);pointer-events:auto}
+.welcome-intro-copy{
+  position:relative;z-index:4;font-family:"Shippori Mincho",serif;color:var(--cream);
+  font-size:clamp(34px,10vw,54px);font-weight:700;letter-spacing:.08em;
+  text-shadow:0 0 24px rgba(246,215,141,.22);
+  animation:welcomeCopyIn 1.35s cubic-bezier(.22,.7,.2,1) both;
+}
+.welcome-intro-copy span{color:var(--gold-bright);margin-left:.18em}
+.welcome-glow{
+  position:absolute;left:50%;top:50%;width:min(68vw,360px);aspect-ratio:1;border-radius:50%;
+  transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(246,215,141,.18),rgba(228,184,98,.04) 43%,transparent 70%);
+  filter:blur(2px);animation:welcomeGlow 2.6s ease-in-out infinite;
+}
+.welcome-spark{
+  position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;
+  background:var(--gold-bright);box-shadow:0 0 18px rgba(246,215,141,.9);
+  opacity:0;animation:welcomeSpark 2.6s ease-out infinite;
+}
+.welcome-spark.s1{--x:-118px;--y:-72px;animation-delay:.05s}
+.welcome-spark.s2{--x:104px;--y:-94px;animation-delay:.38s}
+.welcome-spark.s3{--x:-92px;--y:96px;animation-delay:.72s}
+.welcome-spark.s4{--x:126px;--y:76px;animation-delay:1.08s}
+.welcome-inner{position:relative;z-index:3;width:100%;max-width:430px}
 .welcome-invite{
   display:inline-flex;align-items:center;gap:7px;margin-bottom:24px;
   border:1px solid var(--line);border-radius:999px;padding:6px 14px;
   color:var(--gold-bright);font-size:10.5px;letter-spacing:.18em;
   background:rgba(34,28,42,.72);
 }
-.welcome-kicker{font-size:15px;color:var(--cream);letter-spacing:.08em;margin-bottom:8px}
 .welcome-title{font-size:34px;line-height:1.45;color:var(--cream);margin-bottom:10px}
 .welcome-title span{color:var(--gold-bright);font-size:42px}
 .welcome-number{font-size:13px;color:var(--muted);margin-bottom:28px}
 .welcome-message{
   background:rgba(34,28,42,.82);border:1px solid var(--line);
-  border-radius:20px;padding:22px 20px;margin-bottom:24px;
+  border-radius:20px;padding:22px 14px;margin-bottom:24px;
   box-shadow:0 18px 60px rgba(0,0,0,.22);
 }
 .welcome-message strong{
-  display:block;font-family:"Shippori Mincho",serif;font-size:19px;
-  line-height:1.8;color:var(--gold-bright);margin-bottom:9px;
+  display:block;font-family:"Shippori Mincho",serif;font-size:clamp(15px,4.4vw,19px);
+  white-space:nowrap;line-height:1.8;color:var(--gold-bright);margin-bottom:11px;
 }
 .welcome-message p{font-size:14px;line-height:1.9;color:var(--cream)}
 .welcome-ripple{
-  position:absolute;left:50%;top:37%;width:120px;height:120px;
+  position:absolute;left:50%;top:50%;width:120px;height:120px;
   border:1px solid rgba(228,184,98,.42);border-radius:50%;
   transform:translate(-50%,-50%);opacity:0;
   animation:welcomeRipple 3.6s ease-out infinite;
 }
+.welcome-detail .welcome-ripple{top:37%}
 .welcome-ripple.r2{animation-delay:1.2s}
 .welcome-ripple.r3{animation-delay:2.4s}
+@keyframes welcomeCopyIn{
+  0%{opacity:0;transform:translateY(14px);filter:blur(8px)}
+  100%{opacity:1;transform:translateY(0);filter:blur(0)}
+}
+@keyframes welcomeGlow{
+  0%,100%{opacity:.56;transform:translate(-50%,-50%) scale(.92)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+}
+@keyframes welcomeSpark{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}
+  18%{opacity:.95}
+  100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.2)}
+}
 @keyframes welcomeRipple{
   0%{transform:translate(-50%,-50%) scale(.35);opacity:.7}
   100%{transform:translate(-50%,-50%) scale(5.1);opacity:0}
 }
 @media (prefers-reduced-motion:reduce){
+  .welcome-scene{transition:opacity .2s ease,visibility .2s}
+  .welcome-intro-copy,.welcome-glow,.welcome-spark{animation:none}
   .welcome-ripple{animation:none;opacity:.14;transform:translate(-50%,-50%) scale(3.5)}
 }
 
@@ -441,17 +486,25 @@ body.is-host .host-badge{display:block}
 
 <!-- ======== ウェルカム（登録直後の1回だけ） ======== -->
 <div id="welcome" class="screen" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
-  <div class="welcome-ripple"></div><div class="welcome-ripple r2"></div><div class="welcome-ripple r3"></div>
-  <div class="welcome-inner">
-    <div class="welcome-invite">✦ INVITATION ONLY ✦</div>
-    <div class="welcome-kicker">ようこそ素敵会へ。</div>
-    <h1 class="welcome-title" id="welcome-title">あなたは<br><span id="wc-gen">1期生</span>です。</h1>
-    <div class="welcome-number">素敵会の <span id="wc-no">1人目のなかま</span></div>
-    <div class="welcome-message">
-      <strong>すてきを波紋のように巡らせる場所</strong>
-      <p>招待を受け取った、一人ひとりのための場所です。<br>思いやりを循環させる時間をお楽しみください。</p>
+  <div class="welcome-scene welcome-intro" aria-hidden="true">
+    <div class="welcome-glow"></div>
+    <div class="welcome-ripple"></div><div class="welcome-ripple r2"></div><div class="welcome-ripple r3"></div>
+    <div class="welcome-spark s1"></div><div class="welcome-spark s2"></div>
+    <div class="welcome-spark s3"></div><div class="welcome-spark s4"></div>
+    <div class="welcome-intro-copy">Welcome<span>素敵会</span></div>
+  </div>
+  <div class="welcome-scene welcome-detail">
+    <div class="welcome-ripple"></div><div class="welcome-ripple r2"></div><div class="welcome-ripple r3"></div>
+    <div class="welcome-inner">
+      <div class="welcome-invite">✦ INVITATION ONLY ✦</div>
+      <h1 class="welcome-title" id="welcome-title">あなたは<br><span id="wc-gen">1期生</span>です。</h1>
+      <div class="welcome-number">素敵会の <span id="wc-no">1人目のなかま</span></div>
+      <div class="welcome-message">
+        <strong>すてきを波紋のように巡らせる場</strong>
+        <p>思いやりを循環させる時間を<br>心赴くままにお楽しみください。</p>
+      </div>
+      <button class="btn" id="wc-go">素敵会をはじめる</button>
     </div>
-    <button class="btn" id="wc-go">素敵会をはじめる</button>
   </div>
 </div>
 
@@ -852,10 +905,13 @@ async function showWelcome() {
   if (!welcome || !go) return;
   $("#wc-gen").textContent = `${info.gen}期生`;
   $("#wc-no").textContent = `${info.no}人目のなかま`;
+  welcome.classList.remove("phase-detail");
   welcome.classList.add("active");
+  const detailTimer = setTimeout(() => welcome.classList.add("phase-detail"), 2800);
   return new Promise((resolve) => {
     go.addEventListener("click", () => {
-      welcome.classList.remove("active");
+      clearTimeout(detailTimer);
+      welcome.classList.remove("active", "phase-detail");
       resolve();
     }, { once: true });
   });
