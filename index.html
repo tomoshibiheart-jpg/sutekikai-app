@@ -324,6 +324,12 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .post-item.pinned{background:linear-gradient(180deg,rgba(228,184,98,.08),transparent);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px}
 .pin-tag{font-size:10.5px;padding:2px 9px;border-radius:999px;border:1px solid var(--gold);color:var(--gold-bright);letter-spacing:.05em}
 
+/* ---------- pull to refresh ---------- */
+#ptr{position:fixed;top:calc(6px + env(safe-area-inset-top));left:50%;transform:translateX(-50%) scale(0);z-index:290;
+  background:var(--surface);border:1px solid var(--gold);color:var(--gold-bright);
+  border-radius:999px;padding:8px 18px;font-size:12.5px;transition:transform .18s;pointer-events:none}
+#ptr.show{transform:translateX(-50%) scale(1)}
+
 /* ---------- toast ---------- */
 #toast{
   position:fixed;left:50%;bottom:calc(104px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
@@ -591,6 +597,7 @@ body.is-host .host-badge{display:block}
   </div>
 </div>
 
+<div id="ptr">↓ 引っ張って更新</div>
 <div id="toast"></div>
 
 <script>
@@ -726,7 +733,7 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); setupPush(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); setupPush(); setupPullToRefresh(); } catch (e) { report(e); }
   // アプリ使用中に更新された場合は、見ていたタブに留まる
   // (sessionStorageはアプリを閉じると消えるため、次回起動時は「つながる」から始まる)
   try {
@@ -976,6 +983,45 @@ async function showProfile(userId) {
   $("#profile-modal").classList.add("active");
 }
 const TAB_KEY = "sutekikai_tab_session";
+/* 引っ張って更新: ページ再読込ではなく、開いているタブのデータだけを更新する */
+function setupPullToRefresh() {
+  let startY = null, pulling = false;
+  const THRESHOLD = 90;
+  const ptr = $("#ptr");
+  const blocked = () => document.querySelector("#scanner.active, #lightbox.active, .modal.active, #onboarding.active");
+  document.addEventListener("touchstart", (e) => {
+    if (window.scrollY > 0 || blocked()) { startY = null; return; }
+    startY = e.touches[0].clientY;
+    pulling = false;
+  }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 24 && window.scrollY <= 0) {
+      pulling = dy > THRESHOLD;
+      ptr.textContent = pulling ? "↑ 離して更新" : "↓ 引っ張って更新";
+      ptr.classList.add("show");
+    } else {
+      ptr.classList.remove("show");
+    }
+  }, { passive: true });
+  document.addEventListener("touchend", async () => {
+    ptr.classList.remove("show");
+    if (startY === null || !pulling) { startY = null; return; }
+    startY = null; pulling = false;
+    toast("更新中…", 2500);
+    const page = document.querySelector(".tabbar button.on")?.dataset.page;
+    try {
+      if (page === "connect") { await loadProfiles(); }
+      else if (page === "play") { await loadBingo(); }
+      else if (page === "plaza") { await Promise.all([loadEvents(), loadPhotos(), loadSongs()]); }
+      else if (page === "feed") { await loadPosts(); }
+      else if (page === "notes") { await Promise.all([loadNotes(), loadProfiles()]); }
+      else if (page === "me") { await Promise.all([refreshMyPoints(), loadMembersAll()]); }
+      toast("更新しました ✦");
+    } catch (e) { toast("更新に失敗しました。通信環境を確認してください", 3500); }
+  }, { passive: true });
+}
 function setupTabs() {
   $$(".tabbar button").forEach(b => b.addEventListener("click", () => {
     $$(".tabbar button").forEach(x => x.classList.remove("on"));
@@ -1458,12 +1504,17 @@ async function sendNote(toId, kind, body) {
   return true;
 }
 function setupNotes() {
-  $("#btn-send-note").addEventListener("click", async () => {
+  const btn = $("#btn-send-note");
+  btn.addEventListener("click", async () => {
+    if (btn.disabled) return;  // 多重送信ガード
     const to = $("#note-to").value, body = $("#note-body").value.trim();
     if (!to) return toast("贈る相手を選んでください");
     if (!body) return toast("ことばを入力してください");
-    const ok = await sendNote(to, "message", body);
-    if (ok) { $("#note-body").value = ""; $("#note-to").value = ""; }
+    btn.disabled = true;
+    try {
+      const ok = await sendNote(to, "message", body);
+      if (ok) { $("#note-body").value = ""; $("#note-to").value = ""; }
+    } finally { btn.disabled = false; }
   });
 }
 async function loadNotes() {
@@ -1479,9 +1530,16 @@ function renderNotes(list) {
       <div class="note-meta">
         <span class="kind-tag ${n.kind === "impression" ? "impression" : ""}">${n.kind === "impression" ? "印象" : "ことば"}</span>
         <span>${esc(nameOf(n.from_id))}さんより</span><span>・${fmtDate(n.created_at)}</span>
+        <button class="note-del" data-id="${n.id}" style="margin-left:auto;background:none;color:var(--ember);font-size:11px;padding:0">削除</button>
       </div>
       <div class="note-body">${esc(n.body)}</div>
     </div>`).join("");
+  el.querySelectorAll(".note-del").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("このことばを貯金箱から削除しますか?\n元に戻せません。")) return;
+    await sb.from("notes").delete().eq("id", b.dataset.id);
+    toast("削除しました");
+    await loadNotes();
+  }));
 }
 
 /* ---------------- ビンゴ ---------------- */
@@ -1633,8 +1691,12 @@ function setupPosts() {
     e.target.value = "";
   });
   $("#btn-post").addEventListener("click", async () => {
+    const pb = $("#btn-post");
+    if (pb.disabled) return;  // 多重送信ガード
     const body = $("#post-body").value.trim();
     if (!body && !postPhotoFile) return toast("ことばか写真を、どちらかは添えてください");
+    pb.disabled = true;
+    setTimeout(() => { pb.disabled = false; }, 4000);
     toast("投稿中…", 6000);
     try {
       let photo_path = null;
@@ -1762,8 +1824,11 @@ function bindPostEvents(root) {
   const sendCmt = async (pid, input) => {
     const body = input.value.trim();
     if (!body) return;
+    if (input.dataset.sending === "1") return;  // 多重送信ガード
+    input.dataset.sending = "1";
     const { data, error } = await sb.from("post_comments")
       .insert({ post_id: pid, user_id: me.id, body }).select().single();
+    input.dataset.sending = "";
     if (error) return toast("コメント機能はまだ準備中です(SQLの実行が必要)", 4000);
     input.value = "";
     cmtsCache.push(data);
@@ -1773,9 +1838,6 @@ function bindPostEvents(root) {
   root.querySelectorAll(".cmt-send").forEach(b => b.addEventListener("click", () => {
     const input = document.querySelector(`.cmt-input[data-id="${b.dataset.id}"]`);
     if (input) sendCmt(b.dataset.id, input);
-  }));
-  root.querySelectorAll(".cmt-input").forEach(inp => inp.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); sendCmt(inp.dataset.id, inp); }
   }));
   root.querySelectorAll(".cmt-del").forEach(b => b.addEventListener("click", async () => {
     if (!confirm("このコメントを削除しますか?")) return;
