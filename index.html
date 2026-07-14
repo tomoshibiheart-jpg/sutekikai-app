@@ -66,6 +66,54 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .field-label{font-size:12px;color:var(--gold);letter-spacing:.12em;margin:16px 0 6px}
 .hint{font-size:12px;color:var(--muted);margin-top:16px}
 
+/* ---------- welcome (registration complete: once only) ---------- */
+#welcome{
+  position:fixed;inset:0;z-index:500;display:none;
+  align-items:center;justify-content:center;overflow:hidden;
+  padding:calc(28px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 35%,rgba(228,184,98,.13),transparent 34%),
+    linear-gradient(180deg,#17131c 0%,#1d1724 100%);
+  text-align:center;
+}
+#welcome.active{display:flex}
+.welcome-inner{position:relative;z-index:2;width:100%;max-width:430px}
+.welcome-invite{
+  display:inline-flex;align-items:center;gap:7px;margin-bottom:24px;
+  border:1px solid var(--line);border-radius:999px;padding:6px 14px;
+  color:var(--gold-bright);font-size:10.5px;letter-spacing:.18em;
+  background:rgba(34,28,42,.72);
+}
+.welcome-kicker{font-size:15px;color:var(--cream);letter-spacing:.08em;margin-bottom:8px}
+.welcome-title{font-size:34px;line-height:1.45;color:var(--cream);margin-bottom:10px}
+.welcome-title span{color:var(--gold-bright);font-size:42px}
+.welcome-number{font-size:13px;color:var(--muted);margin-bottom:28px}
+.welcome-message{
+  background:rgba(34,28,42,.82);border:1px solid var(--line);
+  border-radius:20px;padding:22px 20px;margin-bottom:24px;
+  box-shadow:0 18px 60px rgba(0,0,0,.22);
+}
+.welcome-message strong{
+  display:block;font-family:"Shippori Mincho",serif;font-size:19px;
+  line-height:1.8;color:var(--gold-bright);margin-bottom:9px;
+}
+.welcome-message p{font-size:14px;line-height:1.9;color:var(--cream)}
+.welcome-ripple{
+  position:absolute;left:50%;top:37%;width:120px;height:120px;
+  border:1px solid rgba(228,184,98,.42);border-radius:50%;
+  transform:translate(-50%,-50%);opacity:0;
+  animation:welcomeRipple 3.6s ease-out infinite;
+}
+.welcome-ripple.r2{animation-delay:1.2s}
+.welcome-ripple.r3{animation-delay:2.4s}
+@keyframes welcomeRipple{
+  0%{transform:translate(-50%,-50%) scale(.35);opacity:.7}
+  100%{transform:translate(-50%,-50%) scale(5.1);opacity:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .welcome-ripple{animation:none;opacity:.14;transform:translate(-50%,-50%) scale(3.5)}
+}
+
 /* ---------- app frame ---------- */
 #app{display:none}
 #app.active{display:block}
@@ -236,6 +284,21 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 }
 .rsvp-btn.sel{background:var(--gold);color:#1d1710;border-color:var(--gold);font-weight:700}
 .attendee-line{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.next-event-countdown{
+  position:relative;overflow:hidden;margin-bottom:18px;padding:18px 19px;
+  border:1px solid var(--gold);border-radius:18px;
+  background:linear-gradient(135deg,rgba(228,184,98,.16),rgba(34,28,42,.94));
+  box-shadow:0 12px 36px rgba(0,0,0,.18);
+}
+.next-event-countdown[hidden]{display:none}
+.next-event-countdown::after{
+  content:"";position:absolute;right:-35px;top:-52px;width:130px;height:130px;
+  border:1px solid rgba(246,215,141,.2);border-radius:50%;
+}
+.countdown-label{font-size:10.5px;color:var(--gold);letter-spacing:.16em;margin-bottom:4px}
+.countdown-days{font-family:"Shippori Mincho",serif;font-size:24px;color:var(--cream);line-height:1.4}
+.countdown-days strong{font-size:42px;color:var(--gold-bright);margin:0 3px}
+.countdown-event{font-size:12.5px;color:var(--muted);margin-top:4px;padding-right:36px}
 
 /* ---------- songs ---------- */
 .song-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
@@ -358,6 +421,11 @@ body.is-host .host-badge{display:block}
 <div id="onboarding" class="screen">
   <div class="brand-mark">素敵会</div>
   <div class="brand-sub">SUTEKIKAI — 素敵な場所で、素敵な時間を。</div>
+  <div class="avatar-edit" style="margin-bottom:18px">
+    <div id="ob-avatar-preview" class="avatar-ph" style="width:88px;height:88px;font-size:30px">?</div>
+    <button class="btn ghost small" id="ob-btn-avatar">アイコン写真を選ぶ(任意)</button>
+    <input type="file" id="ob-avatar-input" accept="image/*" style="display:none">
+  </div>
   <div class="field-label">お名前(みんなに表示されます)</div>
   <input id="ob-name" type="text" placeholder="例:くぐり" maxlength="20" autocomplete="off">
   <div class="field-label">ひとこと(任意)</div>
@@ -371,6 +439,22 @@ body.is-host .host-badge{display:block}
   <p class="hint">ヒント:Safariの共有ボタン →「ホーム画面に追加」でアプリとして使えます。「好きなこと」を書くと、共通点のある参加者を見つけてくれます。</p>
 </div>
 
+<!-- ======== ウェルカム（登録直後の1回だけ） ======== -->
+<div id="welcome" class="screen" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+  <div class="welcome-ripple"></div><div class="welcome-ripple r2"></div><div class="welcome-ripple r3"></div>
+  <div class="welcome-inner">
+    <div class="welcome-invite">✦ INVITATION ONLY ✦</div>
+    <div class="welcome-kicker">ようこそ素敵会へ。</div>
+    <h1 class="welcome-title" id="welcome-title">あなたは<br><span id="wc-gen">1期生</span>です。</h1>
+    <div class="welcome-number">素敵会の <span id="wc-no">1人目のなかま</span></div>
+    <div class="welcome-message">
+      <strong>すてきを波紋のように巡らせる場所</strong>
+      <p>招待を受け取った、一人ひとりのための場所です。<br>思いやりを循環させる時間をお楽しみください。</p>
+    </div>
+    <button class="btn" id="wc-go">素敵会をはじめる</button>
+  </div>
+</div>
+
 <!-- ======== 本体 ======== -->
 <div id="app" class="screen">
 
@@ -381,6 +465,7 @@ body.is-host .host-badge{display:block}
       <button class="btn ghost small" id="btn-manual" style="flex-shrink:0">ご案内</button>
     </div>
     <p class="page-lead">お互いのQRを読み取ると、何かが起こります。</p>
+    <div id="next-event-countdown" class="next-event-countdown" hidden aria-live="polite"></div>
     <div class="card qr-wrap">
       <div id="myqr"></div>
       <div class="qr-name" id="my-name-label"></div>
@@ -491,7 +576,7 @@ body.is-host .host-badge{display:block}
     </div>
     <div class="card">
       <div class="section-h">お知らせ通知</div>
-      <p class="hint" id="push-status" style="margin-bottom:10px">新しい会のお知らせを、スマホの通知で受け取れます。</p>
+      <p class="hint" id="push-status" style="margin-bottom:10px">新しい会や、あなたに届いた「ことば」をスマホの通知で受け取れます。</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn ghost small" id="btn-push">通知を受け取る</button>
         <button class="btn ghost small" id="btn-push-test" style="display:none">📣 テスト通知を送る(主催者)</button>
@@ -712,16 +797,67 @@ async function init() {
   }
   $("#onboarding").classList.add("active");
   buildTagPicker("ob-tagpick", []);
+  $("#ob-btn-avatar").addEventListener("click", () => $("#ob-avatar-input").click());
+  $("#ob-avatar-input").addEventListener("change", async (e) => {
+    const f = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (!f) return;
+    obAvatarFile = f;
+    try {
+      const blob = await cropToSquareJpeg(f);
+      $("#ob-avatar-preview").outerHTML =
+        `<img id="ob-avatar-preview" class="avatar" src="${URL.createObjectURL(blob)}" style="width:88px;height:88px" alt="preview">`;
+    } catch (err) { toast("画像を読み込めませんでした"); }
+  });
+
   $("#ob-go").addEventListener("click", async () => {
+    const btn = $("#ob-go");
+    if (btn.disabled) return;
     const name = $("#ob-name").value.trim();
     if (!name) return toast("お名前を入れてください");
-    const { data, error } = await sb.from("profiles")
-      .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"), intro: $("#ob-intro").value.trim(), role: "member" })
-      .select().single();
-    if (error) return toast("登録に失敗しました。通信環境を確認してください");
-    me = data; localStorage.setItem("sutekikai_uid", me.id);
-    $("#onboarding").classList.remove("active");
-    enterApp();
+    btn.disabled = true;
+    try {
+      let avatar_path = null;
+      if (obAvatarFile) {
+        try {
+          const blob = await cropToSquareJpeg(obAvatarFile);
+          avatar_path = `avatar_new_${uuid()}.jpg`;
+          const { error: upErr } = await sb.storage.from("photos").upload(avatar_path, blob, { contentType: "image/jpeg" });
+          if (upErr) throw upErr;
+        } catch (err) {
+          btn.disabled = false;
+          return toast("アイコンの登録に失敗しました。画像を選び直してください", 4500);
+        }
+      }
+      const { data, error } = await sb.from("profiles")
+        .insert({ name, bio: $("#ob-bio").value.trim(), tags: combineTags("ob-tagpick", "ob-tags"),
+                  intro: $("#ob-intro").value.trim(), role: "member", avatar_path })
+        .select().single();
+      if (error) { btn.disabled = false; return toast("登録に失敗しました。通信環境を確認してください"); }
+      me = data; localStorage.setItem("sutekikai_uid", me.id);
+      obAvatarFile = null;
+      $("#onboarding").classList.remove("active");
+      await showWelcome();   // ★ようこそ画面
+      await enterApp();
+    } catch (e) { btn.disabled = false; report(e); }
+  });
+}
+let obAvatarFile = null;
+
+/* ---------------- ようこそ画面(登録直後の1回だけ) ---------------- */
+async function showWelcome() {
+  try { await loadCohorts(); } catch (e) { console.warn("cohort load failed", e); }
+  const info = cohortMap[me.id] || { gen: 1, no: 1 };
+  const welcome = $("#welcome"), go = $("#wc-go");
+  if (!welcome || !go) return;
+  $("#wc-gen").textContent = `${info.gen}期生`;
+  $("#wc-no").textContent = `${info.no}人目のなかま`;
+  welcome.classList.add("active");
+  return new Promise((resolve) => {
+    go.addEventListener("click", () => {
+      welcome.classList.remove("active");
+      resolve();
+    }, { once: true });
   });
 }
 
@@ -737,11 +873,14 @@ async function enterApp() {
   // アプリ使用中に更新された場合は、見ていたタブに留まる
   // (sessionStorageはアプリを閉じると消えるため、次回起動時は「つながる」から始まる)
   try {
-    const t = sessionStorage.getItem(TAB_KEY);
+    const allowedTabs = ["connect", "play", "plaza", "feed", "notes", "me"];
+    const hashTab = location.hash.replace(/^#/, "");
+    const t = allowedTabs.includes(hashTab) ? hashTab : sessionStorage.getItem(TAB_KEY);
     if (t && t !== "connect") {
       const btn = document.querySelector(`.tabbar button[data-page="${t}"]`);
       if (btn) btn.click();
     }
+    if (allowedTabs.includes(hashTab)) history.replaceState(null, "", location.pathname + location.search);
   } catch (e) {}
 
   try { renderMyQR(); } catch (e) { report(e); }
@@ -790,6 +929,19 @@ function urlBase64ToUint8Array(base64String) {
 const isStandalone = () =>
   window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
+async function sendPushNotification({ title, body, url = "./index.html", targetUserId = null }) {
+  const r = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-push`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+    body: JSON.stringify({ title, body, url, target_user_id: targetUserId }),
+  });
+  const raw = await r.text();
+  let result = {};
+  try { result = JSON.parse(raw); } catch (e) {}
+  if (!r.ok || result.ok === false) throw new Error(result.error || `push HTTP ${r.status}`);
+  return result;
+}
+
 async function refreshPushStatus() {
   const st = $("#push-status"), btn = $("#btn-push");
   if (!st || !btn) return;
@@ -808,11 +960,11 @@ async function refreshPushStatus() {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     if (sub && Notification.permission === "granted") {
-      st.textContent = "通知はオンです ✦ 新しい会のお知らせが届きます。";
+      st.textContent = "通知はオンです ✦ 新しい会と、届いた「ことば」をお知らせします。";
       btn.textContent = "通知をとめる";
       btn.dataset.on = "1";
     } else {
-      st.textContent = "新しい会のお知らせを、スマホの通知で受け取れます。";
+      st.textContent = "新しい会や、あなたに届いた「ことば」をスマホの通知で受け取れます。";
       btn.textContent = "通知を受け取る";
       btn.dataset.on = "0";
     }
@@ -827,19 +979,12 @@ function setupPush() {
   $("#btn-push-test")?.addEventListener("click", async () => {
     toast("テスト通知を送信中…", 4000);
     try {
-      const r = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ title: "素敵会 ・ テスト通知", body: "この通知が見えていれば、設定は完了です ✦" }),
+      const j = await sendPushNotification({
+        title: "素敵会 ・ テスト通知",
+        body: "この通知が見えていれば、設定は完了です ✦",
       });
-      const raw = await r.text();
-      let j = {};
-      try { j = JSON.parse(raw); } catch (e) {}
-      if (j.ok) {
-        if (j.total === 0) toast("登録済みの端末が0台です。iPhoneの「通知を受け取る」を押し直してください", 8000);
-        else toast(`送信完了:${j.sent}/${j.total}台に届けました${j.firstError ? " ・ エラー: " + j.firstError : ""}`, 12000);
-      }
-      else toast(`診断情報 [HTTP ${r.status}] ${raw.slice(0, 180)}`, 12000);
+      if (j.total === 0) toast("登録済みの端末が0台です。iPhoneの「通知を受け取る」を押し直してください", 8000);
+      else toast(`送信完了:${j.sent}/${j.total}台に届けました${j.firstError ? " ・ エラー: " + j.firstError : ""}`, 12000);
     } catch (e) {
       toast("送信できませんでした。Edge Function(send-push)が未設定の可能性があります", 6000);
     }
@@ -1233,8 +1378,39 @@ async function ensureNames(ids) {
   const { data } = await sb.from("profiles").select("id,name").in("id", missing);
   (data || []).forEach(p => profileMap[p.id] = p.name);
 }
+function localCalendarDayDiff(iso) {
+  const eventDate = new Date(iso);
+  if (Number.isNaN(eventDate.getTime())) return null;
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventUtc = Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+  return Math.round((eventUtc - todayUtc) / 86400000);
+}
+function renderNextEventCountdown() {
+  const el = $("#next-event-countdown");
+  if (!el) return;
+  const next = eventsCache
+    .filter(e => e.status === "upcoming" && e.starts_at && myRsvps[e.id] === "yes")
+    .map(e => ({ event: e, days: localCalendarDayDiff(e.starts_at) }))
+    .filter(x => x.days !== null && x.days >= 0)
+    .sort((a, b) => new Date(a.event.starts_at) - new Date(b.event.starts_at))[0];
+  if (!next) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  const dayText = next.days === 0
+    ? `<span>いよいよ</span> <strong>今日</strong>`
+    : `あと <strong>${next.days}</strong> 日`;
+  el.innerHTML = `
+    <div class="countdown-label">参加予定の素敵会まで</div>
+    <div class="countdown-days">${dayText}</div>
+    <div class="countdown-event">${esc(next.event.title)} ・ ${fmtEventDate(next.event.starts_at)}</div>`;
+  el.hidden = false;
+}
 function renderEvents() {
   const el = $("#events-area");
+  renderNextEventCountdown();
   const upcoming = eventsCache.filter(e => e.status === "upcoming");
   const surveyEvents = eventsCache.filter(e => e.status === "past" && e.survey_open);
   if (!upcoming.length && !surveyEvents.length) {
@@ -1454,13 +1630,10 @@ async function renderHostEvents() {
     } catch (e) {}
     // 全員のスマホにプッシュ通知
     try {
-      await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({
-          title: "素敵会 ・ 新しい会のお知らせ",
-          body: `${title}\n${when}${venue ? " / " + venue : ""}`,
-        }),
+      await sendPushNotification({
+        title: "素敵会 ・ 新しい会のお知らせ",
+        body: `${title}\n${when}${venue ? " / " + venue : ""}`,
+        url: "./index.html#plaza",
       });
     } catch (e) {}
     $("#ev-title").value = ""; $("#ev-venue").value = ""; $("#ev-date").value = ""; $("#ev-desc").value = "";
@@ -1502,6 +1675,17 @@ async function sendNote(toId, kind, body) {
   if (error) { toast("送信に失敗しました"); return false; }
   if (!(prev && prev.length)) {
     await sb.rpc("add_points", { uid: toId, amt: CONFIG.GRATITUDE_POINTS });
+  }
+  try {
+    await sendPushNotification({
+      title: "素敵会 ・ ことばが届きました",
+      body: `${me.name}さんから、ことばが届きました ✦`,
+      url: "./index.html#notes",
+      targetUserId: toId,
+    });
+  } catch (e) {
+    // 通知未許可・未購読でも、ことば自体の送信は成功扱いにする
+    console.warn("word push failed", e);
   }
   toast(`${nameOf(toId)}さんに贈りました ✦`);
   return true;
