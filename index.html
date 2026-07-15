@@ -243,6 +243,26 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .ov-points{font-family:"Shippori Mincho",serif;font-size:44px;color:var(--gold-bright)}
 .ov-actions{margin-top:22px;width:100%;max-width:400px;position:relative;display:flex;flex-direction:column;gap:10px}
 
+/* ---------- roulette ---------- */
+.rl-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;background:var(--surface2);
+  border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.rl-row .rl-size{font-family:"Shippori Mincho",serif;font-size:20px;color:var(--gold-bright);min-width:64px}
+.rl-stepper{display:flex;align-items:center;gap:8px;margin-left:auto}
+.rl-stepper button{width:32px;height:32px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--gold);color:var(--gold-bright);font-size:18px;line-height:1}
+.rl-stepper .rl-count{min-width:28px;text-align:center;font-size:16px;color:var(--cream)}
+.rl-row .rl-del{background:none;color:var(--ember);font-size:12px;padding:2px 4px}
+.rl-mem{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);
+  border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 6px;margin:3px;font-size:13px;cursor:pointer;
+  transition:opacity .15s}
+.rl-mem.off{opacity:.32}
+.rl-group{background:var(--surface2);border:1px solid var(--gold);border-radius:14px;padding:14px 16px;margin-bottom:10px;
+  animation:wcIn .4s ease-out both}
+.rl-group-h{font-size:12px;color:var(--gold);letter-spacing:.1em;margin-bottom:8px}
+.rl-group-names{display:flex;flex-wrap:wrap;gap:8px}
+.rl-gm{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--cream)}
+.rl-leftover{color:var(--muted);font-size:12.5px;margin-top:8px}
+
 /* ---------- bingo ---------- */
 .bingo-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:14px}
 .bingo-cell{
@@ -366,6 +386,19 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .kind-tag.impression{color:var(--ember);border-color:rgba(201,111,74,.4)}
 .note-body{font-size:15px;white-space:pre-wrap}
 .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:24px 0}
+
+/* ---------- connections ---------- */
+.connect-summary{display:flex;gap:10px;margin-bottom:16px}
+.cs-stat{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
+.cs-num{font-family:"Shippori Mincho",serif;font-size:28px;color:var(--gold-bright);line-height:1}
+.cs-lbl{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.06em}
+.cp-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.cp-item:last-child{border-bottom:none}
+.cp-body{flex:1;min-width:0}
+.cp-name{font-size:15px;color:var(--cream)}
+.cp-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.cp-count{font-family:"Shippori Mincho",serif;font-size:15px;color:var(--gold);white-space:nowrap}
+.cp-count small{font-size:11px;color:var(--muted)}
 
 /* ---------- me ---------- */
 .me-points{font-family:"Shippori Mincho",serif;font-size:52px;color:var(--gold-bright);line-height:1.2}
@@ -535,10 +568,29 @@ body.is-host .host-badge{display:block}
   <!-- あそぶ(ビンゴ) -->
   <div class="page" id="page-play">
     <h1 class="page-title">あそぶ</h1>
-    <p class="page-lead">みんなでビンゴ。景品はぜんいんに行き渡ります。</p>
-    <div class="host-badge">主催者モード ON</div>
-    <div id="bingo-area"><p class="empty">読み込み中…</p></div>
-    <div id="host-bingo"></div>
+
+    <!-- 席替えルーレット -->
+    <div class="card">
+      <div class="section-h">席替えルーレット</div>
+      <p class="hint" style="margin-bottom:12px">今この会場にいる人を、シャッフルしてグループ分けします。何人組を何グループ作るか決めてください。</p>
+      <div id="roulette-config"></div>
+      <button class="btn ghost small" id="rl-add" style="margin-top:8px">＋ グループの種類を追加</button>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+        <div class="field-label">この会場にいる人(参加する人)</div>
+        <div id="rl-members"><p class="empty">読み込み中…</p></div>
+      </div>
+      <button class="btn" id="rl-go" style="margin-top:16px">シャッフルする ✦</button>
+      <div id="rl-result" style="margin-top:18px"></div>
+    </div>
+
+    <!-- ビンゴ -->
+    <div class="card">
+      <div class="section-h">ビンゴ</div>
+      <p class="page-lead" style="margin-top:0">みんなでビンゴ。景品はぜんいんに行き渡ります。</p>
+      <div class="host-badge">主催者モード ON</div>
+      <div id="bingo-area"><p class="empty">読み込み中…</p></div>
+      <div id="host-bingo"></div>
+    </div>
   </div>
 
   <!-- ひろば(アルバム+音楽) -->
@@ -639,6 +691,12 @@ body.is-host .host-badge{display:block}
         <button class="btn ghost small" id="btn-push">通知を受け取る</button>
         <button class="btn ghost small" id="btn-push-test" style="display:none">📣 テスト通知を送る(主催者)</button>
       </div>
+    </div>
+    <div class="card">
+      <div class="section-h">つながりの記録</div>
+      <p class="hint" style="margin-bottom:12px">この場で出会い、ことばを交わした記録です。つながりが、めぐりになる。</p>
+      <div id="connect-summary" class="connect-summary"></div>
+      <div id="connect-people"><p class="empty">まだ記録はありません。QRを交わすと、ここに刻まれていきます。</p></div>
     </div>
     <div class="card">
       <div class="section-h">会員のみなさん</div>
@@ -785,6 +843,21 @@ const THEMES = [
   "誰かにしてもらって忘れられないこと",
   "今のあなたの『挑戦』の話",
   "この素敵会で、話してみたかったこと",
+  "最近ハマっていること・沼っていること",
+  "今年どうしてもやりたいこと、ひとつ",
+  "誰に似ていると言われる?(有名人でも動物でも)",
+  "もし宝くじが当たったら、最初に何を買う?",
+  "自分の取扱説明書に書くとしたら、注意書きは?",
+  "つい集めてしまうもの・つい買ってしまうもの",
+  "生まれ変わったら、なりたい職業や生き物",
+  "最近見た夢、覚えてる?",
+  "自分を色で例えると何色?その理由は?",
+  "ひそかに自慢したい、地味な特技",
+  "コンビニで必ず買ってしまうもの",
+  "タイムマシンがあったら、いつに行く?",
+  "最後に声を出して笑ったのは、いつ?",
+  "3日間の休みと10万円。どう使う?",
+  "自分のテーマソングを選ぶなら?",
 ];
 const POINT_CHOICES = [5, 8, 13, 21];
 
@@ -930,7 +1003,7 @@ function report(e) {
 async function enterApp() {
   $("#app").classList.add("active");
   // 操作系を最初に起動(以降どこが失敗してもタブと画面遷移は必ず動く)
-  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); setupPush(); setupPullToRefresh(); } catch (e) { report(e); }
+  try { setupTabs(); setupConnect(); setupNotes(); setupMe(); setupHost(); setupPhotos(); setupSongs(); setupManual(); setupPosts(); setupAvatar(); setupEventEditor(); setupPush(); setupRoulette(); setupPullToRefresh(); } catch (e) { report(e); }
   // アプリ使用中に更新された場合は、見ていたタブに留まる
   // (sessionStorageはアプリを閉じると消えるため、次回起動時は「つながる」から始まる)
   try {
@@ -1188,8 +1261,37 @@ async function showProfile(userId) {
     ${p.bio ? `<div style="font-size:14.5px;margin-top:8px">${esc(p.bio)}</div>` : ""}
     ${tags.length ? `<div class="chips" style="margin-top:12px">${tags.map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
     ${p.intro ? `<div style="font-size:14px;color:var(--muted);margin-top:14px;white-space:pre-wrap">${esc(p.intro)}</div>` : ""}
+    <div id="profile-connect" style="margin-top:16px"></div>
     <div style="margin-top:20px"><button class="btn ghost" onclick="document.getElementById('profile-modal').classList.remove('active')">とじる</button></div>`;
   $("#profile-modal").classList.add("active");
+  renderProfileConnection(userId);
+}
+
+async function renderProfileConnection(otherId) {
+  const el = $("#profile-connect");
+  if (!el || !me || otherId === me.id) return;
+  const { data: conns } = await sb.from("connections")
+    .select("created_at")
+    .or(`and(scanner_id.eq.${me.id},scanned_id.eq.${otherId}),and(scanner_id.eq.${otherId},scanned_id.eq.${me.id})`);
+  const { data: given } = await sb.from("notes").select("id").eq("from_id", me.id).eq("to_id", otherId);
+  const { data: recv } = await sb.from("notes").select("id").eq("from_id", otherId).eq("to_id", me.id);
+  const meets = (conns || []).length;
+  const g = (given || []).length, r = (recv || []).length;
+  if (!meets && !g && !r) {
+    el.innerHTML = `<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted)">まだ、この方との記録はありません。次の会で、ぜひ。</div>`;
+    return;
+  }
+  const last = (conns || []).map(x => x.created_at).sort().pop();
+  const bits = [];
+  if (meets) bits.push(`これまで <b style="color:var(--gold-bright)">${meets}回</b> 出会っています`);
+  if (g) bits.push(`あなたから ${g} つ、ことばを贈りました`);
+  if (r) bits.push(`${esc(nameOf(otherId))}さんから ${r} つ、ことばをもらいました`);
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(228,184,98,.12),transparent);border:1px solid var(--gold);border-radius:14px;padding:14px 16px">
+      <div style="font-size:12px;color:var(--gold);letter-spacing:.1em;margin-bottom:8px">✦ ふたりのめぐり</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--cream)">${bits.join("<br>")}</div>
+      ${last ? `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">最後に会ったのは ${fmtDate(last)}</div>` : ""}
+    </div>`;
 }
 const TAB_KEY = "sutekikai_tab_session";
 /* 引っ張って更新: ページ再読込ではなく、開いているタブのデータだけを更新する */
@@ -1231,6 +1333,107 @@ function setupPullToRefresh() {
     } catch (e) { toast("更新に失敗しました。通信環境を確認してください", 3500); }
   }, { passive: true });
 }
+/* ---------------- 席替えルーレット ---------------- */
+let rlConfig = [{ size: 2, count: 1 }];   // 例: 2人組を1グループ
+let rlExcluded = {};                       // 参加しない人 { userId: true }
+
+function renderRouletteConfig() {
+  const el = $("#roulette-config");
+  if (!el) return;
+  el.innerHTML = rlConfig.map((row, i) => `
+    <div class="rl-row">
+      <span class="rl-size">${row.size}人組</span>
+      <div class="rl-stepper">
+        <button data-i="${i}" data-d="-1" class="rl-cnt-btn">−</button>
+        <span class="rl-count">${row.count}</span>
+        <button data-i="${i}" data-d="1" class="rl-cnt-btn">＋</button>
+        <span style="font-size:12px;color:var(--muted)">グループ</span>
+      </div>
+      ${rlConfig.length > 1 ? `<button class="rl-del" data-del="${i}">削除</button>` : ""}
+    </div>`).join("");
+  el.querySelectorAll(".rl-cnt-btn").forEach(b => b.addEventListener("click", () => {
+    const i = +b.dataset.i, d = +b.dataset.d;
+    rlConfig[i].count = Math.max(0, rlConfig[i].count + d);
+    renderRouletteConfig();
+  }));
+  el.querySelectorAll(".rl-del").forEach(b => b.addEventListener("click", () => {
+    rlConfig.splice(+b.dataset.del, 1);
+    renderRouletteConfig();
+  }));
+}
+
+function renderRouletteMembers() {
+  const el = $("#rl-members");
+  if (!el) return;
+  const people = allProfiles.filter(p => p.role !== "system");
+  if (!people.length) { el.innerHTML = `<p class="empty">会員がまだいません</p>`; return; }
+  el.innerHTML = people.map(p => `
+    <span class="rl-mem ${rlExcluded[p.id] ? "off" : ""}" data-uid="${p.id}">
+      ${avatarHtml(p.avatar_path, 24)}${esc(p.name)}
+    </span>`).join("");
+  el.querySelectorAll(".rl-mem").forEach(m => m.addEventListener("click", () => {
+    const id = m.dataset.uid;
+    rlExcluded[id] = !rlExcluded[id];
+    m.classList.toggle("off");
+  }));
+}
+
+function shuffleArr(a) {
+  const arr = a.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function runRoulette() {
+  const pool = shuffleArr(
+    allProfiles.filter(p => p.role !== "system" && !rlExcluded[p.id]).map(p => ({ id: p.id, name: p.name, avatar_path: p.avatar_path }))
+  );
+  const need = rlConfig.reduce((s, r) => s + r.size * r.count, 0);
+  if (need === 0) return toast("グループを1つ以上つくってください");
+  if (need > pool.length) return toast(`${need}人分のグループに対して、参加者が${pool.length}人です。人数を調整してください`, 5000);
+
+  // グループを大きい順に埋めると端数が出にくい
+  const plan = [];
+  rlConfig.forEach(r => { for (let k = 0; k < r.count; k++) plan.push(r.size); });
+  plan.sort((a, b) => b - a);
+
+  const groups = [];
+  let idx = 0;
+  plan.forEach(size => {
+    groups.push(pool.slice(idx, idx + size));
+    idx += size;
+  });
+  const leftover = pool.slice(idx);
+
+  const el = $("#rl-result");
+  el.innerHTML = groups.map((g, i) => `
+    <div class="rl-group" style="animation-delay:${i * 0.06}s">
+      <div class="rl-group-h">グループ ${i + 1} ・ ${g.length}人</div>
+      <div class="rl-group-names">
+        ${g.map(m => `<span class="rl-gm">${avatarHtml(m.avatar_path, 26)}${esc(m.name)}</span>`).join("")}
+      </div>
+    </div>`).join("") +
+    (leftover.length ? `<div class="rl-leftover">今回グループに入らなかった方:${leftover.map(m => esc(m.name)).join("、")}(次のシャッフルで優先されます)</div>` : "");
+  toast("シャッフルしました ✦");
+}
+
+function setupRoulette() {
+  const add = $("#rl-add");
+  if (!add) return;
+  add.addEventListener("click", () => {
+    // 未使用の人数(2,3,4,5,6)から次を提案
+    const used = rlConfig.map(r => r.size);
+    const next = [2, 3, 4, 5, 6].find(n => !used.includes(n)) || 2;
+    rlConfig.push({ size: next, count: 1 });
+    renderRouletteConfig();
+  });
+  $("#rl-go").addEventListener("click", runRoulette);
+  renderRouletteConfig();
+}
+
 function setupTabs() {
   $$(".tabbar button").forEach(b => b.addEventListener("click", () => {
     $$(".tabbar button").forEach(x => x.classList.remove("on"));
@@ -1242,7 +1445,8 @@ function setupTabs() {
     if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
     if (b.dataset.page === "feed") { loadPosts(); }
     if (b.dataset.page === "play") { }
-    if (b.dataset.page === "me") { loadMembersAll(); refreshMyPoints(); }
+    if (b.dataset.page === "me") { loadMembersAll(); refreshMyPoints(); loadConnections(); }
+    if (b.dataset.page === "play") { renderRouletteMembers(); }
     if (b.dataset.page === "connect") { loadProfiles(); }
   }));
 }
@@ -1333,8 +1537,9 @@ async function stopScan() {
 }
 
 function pickOutcome() {
+  // はなしのたね・素敵ポイント・印象の送り合いの3種をバランスよく
   const r = Math.random();
-  return r < 0.45 ? "theme" : r < 0.80 ? "points" : "impression";
+  return r < 0.42 ? "theme" : r < 0.72 ? "points" : "impression";
 }
 
 async function handleScan(other) {
@@ -2417,6 +2622,70 @@ async function renderHostMembers() {
     renderHostMembers();
   }));
 }
+async function loadConnections() {
+  if (!me) return;
+  const sumEl = $("#connect-summary"), peopleEl = $("#connect-people");
+  if (!sumEl || !peopleEl) return;
+  if (!allProfiles.length) await loadProfiles();
+
+  const { data: conns } = await sb.from("connections")
+    .select("scanner_id,scanned_id,created_at")
+    .or(`scanner_id.eq.${me.id},scanned_id.eq.${me.id}`);
+  const { data: given } = await sb.from("notes").select("to_id").eq("from_id", me.id);
+  const { data: received } = await sb.from("notes").select("from_id").eq("to_id", me.id);
+
+  const rows = conns || [];
+  const perPerson = {};
+  rows.forEach(r => {
+    const other = r.scanner_id === me.id ? r.scanned_id : r.scanner_id;
+    if (other === me.id) return;
+    if (!perPerson[other]) perPerson[other] = { meets: 0, lastAt: null };
+    perPerson[other].meets++;
+    if (!perPerson[other].lastAt || r.created_at > perPerson[other].lastAt) perPerson[other].lastAt = r.created_at;
+  });
+  const givenCount = {}, recvCount = {};
+  (given || []).forEach(n => { if (n.to_id) givenCount[n.to_id] = (givenCount[n.to_id] || 0) + 1; });
+  (received || []).forEach(n => { if (n.from_id) recvCount[n.from_id] = (recvCount[n.from_id] || 0) + 1; });
+
+  const totalPeople = new Set([
+    ...Object.keys(perPerson), ...Object.keys(givenCount), ...Object.keys(recvCount),
+  ]).size;
+  const totalMeets = rows.length;
+  const totalWords = (given || []).length + (received || []).length;
+
+  sumEl.innerHTML = `
+    <div class="cs-stat"><div class="cs-num">${totalPeople}</div><div class="cs-lbl">出会った人</div></div>
+    <div class="cs-stat"><div class="cs-num">${totalMeets}</div><div class="cs-lbl">交わした回数</div></div>
+    <div class="cs-stat"><div class="cs-num">${totalWords}</div><div class="cs-lbl">ことばの往復</div></div>`;
+
+  const ids = Object.keys(perPerson).sort((a, b) => {
+    if (perPerson[b].meets !== perPerson[a].meets) return perPerson[b].meets - perPerson[a].meets;
+    return (perPerson[b].lastAt || "").localeCompare(perPerson[a].lastAt || "");
+  });
+  if (!ids.length) {
+    peopleEl.innerHTML = `<p class="empty">まだ記録はありません。QRを交わすと、ここに刻まれていきます。</p>`;
+    return;
+  }
+  peopleEl.innerHTML = ids.map(id => {
+    const info = perPerson[id];
+    const g = givenCount[id] || 0, rc = recvCount[id] || 0;
+    const wordBits = [];
+    if (g) wordBits.push(`贈った ${g}`);
+    if (rc) wordBits.push(`もらった ${rc}`);
+    return `
+      <div class="cp-item" data-uid="${id}">
+        ${avatarHtml(avatarOf(id), 42)}
+        <div class="cp-body">
+          <div class="cp-name">${esc(nameOf(id))}さん</div>
+          <div class="cp-meta">最後に会ったのは ${info.lastAt ? fmtDate(info.lastAt) : "―"}${wordBits.length ? " ・ ことば " + wordBits.join(" / ") : ""}</div>
+        </div>
+        <div class="cp-count">${info.meets}<small>回</small></div>
+      </div>`;
+  }).join("");
+  peopleEl.querySelectorAll(".cp-item").forEach(it =>
+    it.addEventListener("click", () => showProfile(it.dataset.uid)));
+}
+
 async function loadMembersAll() {
   await loadCohorts();
   const { data } = await sb.from("profiles")
