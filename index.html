@@ -387,19 +387,6 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .note-body{font-size:15px;white-space:pre-wrap}
 .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:24px 0}
 
-/* ---------- connections ---------- */
-.connect-summary{display:flex;gap:10px;margin-bottom:16px}
-.cs-stat{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center}
-.cs-num{font-family:"Shippori Mincho",serif;font-size:28px;color:var(--gold-bright);line-height:1}
-.cs-lbl{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:.06em}
-.cp-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
-.cp-item:last-child{border-bottom:none}
-.cp-body{flex:1;min-width:0}
-.cp-name{font-size:15px;color:var(--cream)}
-.cp-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-.cp-count{font-family:"Shippori Mincho",serif;font-size:15px;color:var(--gold);white-space:nowrap}
-.cp-count small{font-size:11px;color:var(--muted)}
-
 /* ---------- me ---------- */
 .me-points{font-family:"Shippori Mincho",serif;font-size:52px;color:var(--gold-bright);line-height:1.2}
 .me-title-badge{
@@ -572,15 +559,21 @@ body.is-host .host-badge{display:block}
     <!-- 席替えルーレット -->
     <div class="card">
       <div class="section-h">席替えルーレット</div>
-      <p class="hint" style="margin-bottom:12px">今この会場にいる人を、シャッフルしてグループ分けします。何人組を何グループ作るか決めてください。</p>
-      <div id="roulette-config"></div>
-      <button class="btn ghost small" id="rl-add" style="margin-top:8px">＋ グループの種類を追加</button>
-      <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
-        <div class="field-label">この会場にいる人(参加する人)</div>
-        <div id="rl-members"><p class="empty">読み込み中…</p></div>
+      <!-- 主催者だけに見える設定パネル -->
+      <div id="rl-host" style="display:none">
+        <p class="hint" style="margin-bottom:12px">この会場にいる人を、シャッフルしてグループ分けします。何人組を何グループ作るか決めてください。結果は参加者全員の画面に表示されます。</p>
+        <div id="roulette-config"></div>
+        <button class="btn ghost small" id="rl-add" style="margin-top:8px">＋ グループの種類を追加</button>
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+          <div class="field-label">この会場にいる人(参加する人)</div>
+          <div id="rl-members"><p class="empty">読み込み中…</p></div>
+        </div>
+        <button class="btn" id="rl-go" style="margin-top:16px">シャッフルして、みんなに送る ✦</button>
+        <button class="btn ghost small" id="rl-clear" style="margin-top:8px">結果を消す</button>
       </div>
-      <button class="btn" id="rl-go" style="margin-top:16px">シャッフルする ✦</button>
-      <div id="rl-result" style="margin-top:18px"></div>
+      <!-- 参加者にも見える結果表示 -->
+      <p class="hint" id="rl-wait" style="margin-bottom:4px">主催者が席替えをすると、ここに結果が表示されます。</p>
+      <div id="rl-result" style="margin-top:14px"></div>
     </div>
 
     <!-- ビンゴ -->
@@ -691,12 +684,6 @@ body.is-host .host-badge{display:block}
         <button class="btn ghost small" id="btn-push">通知を受け取る</button>
         <button class="btn ghost small" id="btn-push-test" style="display:none">📣 テスト通知を送る(主催者)</button>
       </div>
-    </div>
-    <div class="card">
-      <div class="section-h">つながりの記録</div>
-      <p class="hint" style="margin-bottom:12px">この場で出会い、ことばを交わした記録です。つながりが、めぐりになる。</p>
-      <div id="connect-summary" class="connect-summary"></div>
-      <div id="connect-people"><p class="empty">まだ記録はありません。QRを交わすと、ここに刻まれていきます。</p></div>
     </div>
     <div class="card">
       <div class="section-h">会員のみなさん</div>
@@ -1261,38 +1248,10 @@ async function showProfile(userId) {
     ${p.bio ? `<div style="font-size:14.5px;margin-top:8px">${esc(p.bio)}</div>` : ""}
     ${tags.length ? `<div class="chips" style="margin-top:12px">${tags.map(t => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
     ${p.intro ? `<div style="font-size:14px;color:var(--muted);margin-top:14px;white-space:pre-wrap">${esc(p.intro)}</div>` : ""}
-    <div id="profile-connect" style="margin-top:16px"></div>
     <div style="margin-top:20px"><button class="btn ghost" onclick="document.getElementById('profile-modal').classList.remove('active')">とじる</button></div>`;
   $("#profile-modal").classList.add("active");
-  renderProfileConnection(userId);
 }
 
-async function renderProfileConnection(otherId) {
-  const el = $("#profile-connect");
-  if (!el || !me || otherId === me.id) return;
-  const { data: conns } = await sb.from("connections")
-    .select("created_at")
-    .or(`and(scanner_id.eq.${me.id},scanned_id.eq.${otherId}),and(scanner_id.eq.${otherId},scanned_id.eq.${me.id})`);
-  const { data: given } = await sb.from("notes").select("id").eq("from_id", me.id).eq("to_id", otherId);
-  const { data: recv } = await sb.from("notes").select("id").eq("from_id", otherId).eq("to_id", me.id);
-  const meets = (conns || []).length;
-  const g = (given || []).length, r = (recv || []).length;
-  if (!meets && !g && !r) {
-    el.innerHTML = `<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted)">まだ、この方との記録はありません。次の会で、ぜひ。</div>`;
-    return;
-  }
-  const last = (conns || []).map(x => x.created_at).sort().pop();
-  const bits = [];
-  if (meets) bits.push(`これまで <b style="color:var(--gold-bright)">${meets}回</b> 出会っています`);
-  if (g) bits.push(`あなたから ${g} つ、ことばを贈りました`);
-  if (r) bits.push(`${esc(nameOf(otherId))}さんから ${r} つ、ことばをもらいました`);
-  el.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(228,184,98,.12),transparent);border:1px solid var(--gold);border-radius:14px;padding:14px 16px">
-      <div style="font-size:12px;color:var(--gold);letter-spacing:.1em;margin-bottom:8px">✦ ふたりのめぐり</div>
-      <div style="font-size:13.5px;line-height:1.9;color:var(--cream)">${bits.join("<br>")}</div>
-      ${last ? `<div style="font-size:11.5px;color:var(--muted);margin-top:8px">最後に会ったのは ${fmtDate(last)}</div>` : ""}
-    </div>`;
-}
 const TAB_KEY = "sutekikai_tab_session";
 /* 引っ張って更新: ページ再読込ではなく、開いているタブのデータだけを更新する */
 function setupPullToRefresh() {
@@ -1387,7 +1346,7 @@ function shuffleArr(a) {
   return arr;
 }
 
-function runRoulette() {
+async function runRoulette() {
   const pool = shuffleArr(
     allProfiles.filter(p => p.role !== "system" && !rlExcluded[p.id]).map(p => ({ id: p.id, name: p.name, avatar_path: p.avatar_path }))
   );
@@ -1395,43 +1354,84 @@ function runRoulette() {
   if (need === 0) return toast("グループを1つ以上つくってください");
   if (need > pool.length) return toast(`${need}人分のグループに対して、参加者が${pool.length}人です。人数を調整してください`, 5000);
 
-  // グループを大きい順に埋めると端数が出にくい
   const plan = [];
   rlConfig.forEach(r => { for (let k = 0; k < r.count; k++) plan.push(r.size); });
   plan.sort((a, b) => b - a);
 
   const groups = [];
   let idx = 0;
-  plan.forEach(size => {
-    groups.push(pool.slice(idx, idx + size));
-    idx += size;
-  });
+  plan.forEach(size => { groups.push(pool.slice(idx, idx + size)); idx += size; });
   const leftover = pool.slice(idx);
 
+  // 全員の画面に出すため、結果をDBに保存(idだけ保存し、表示時に最新の名前・アイコンを引く)
+  const payload = {
+    groups: groups.map(g => g.map(m => m.id)),
+    leftover: leftover.map(m => m.id),
+  };
+  const { error } = await sb.from("roulette").insert({ host_id: me.id, result: payload });
+  if (error) {
+    // テーブル未作成でも主催者の手元には出す
+    renderRouletteResult(payload);
+    return toast("結果を表示しました(全員配信にはSQLの実行が必要)", 5000);
+  }
+  renderRouletteResult(payload);
+  toast("シャッフルして、みんなに送りました ✦");
+}
+
+/* 保存フォーマット(idの配列)から表示を組み立てる。参加者・主催者共通。 */
+function renderRouletteResult(payload) {
   const el = $("#rl-result");
-  el.innerHTML = groups.map((g, i) => `
+  const wait = $("#rl-wait");
+  if (!el) return;
+  if (!payload || !payload.groups || !payload.groups.length) {
+    el.innerHTML = "";
+    if (wait) wait.style.display = hostMode ? "none" : "block";
+    return;
+  }
+  if (wait) wait.style.display = "none";
+  const chip = (id) => `<span class="rl-gm">${avatarHtml(avatarOf(id), 26)}${esc(nameOf(id))}</span>`;
+  el.innerHTML = payload.groups.map((g, i) => `
     <div class="rl-group" style="animation-delay:${i * 0.06}s">
       <div class="rl-group-h">グループ ${i + 1} ・ ${g.length}人</div>
-      <div class="rl-group-names">
-        ${g.map(m => `<span class="rl-gm">${avatarHtml(m.avatar_path, 26)}${esc(m.name)}</span>`).join("")}
-      </div>
+      <div class="rl-group-names">${g.map(chip).join("")}</div>
     </div>`).join("") +
-    (leftover.length ? `<div class="rl-leftover">今回グループに入らなかった方:${leftover.map(m => esc(m.name)).join("、")}(次のシャッフルで優先されます)</div>` : "");
-  toast("シャッフルしました ✦");
+    ((payload.leftover && payload.leftover.length)
+      ? `<div class="rl-leftover">今回グループに入らなかった方:${payload.leftover.map(id => esc(nameOf(id))).join("、")}(次回優先されます)</div>`
+      : "");
+}
+
+/* 最新の席替え結果を読み込む(全員) */
+async function loadRoulette() {
+  const { data } = await sb.from("roulette").select("result").order("created_at", { ascending: false }).limit(1);
+  if (data && data.length) renderRouletteResult(data[0].result);
+  else renderRouletteResult(null);
 }
 
 function setupRoulette() {
   const add = $("#rl-add");
   if (!add) return;
   add.addEventListener("click", () => {
-    // 未使用の人数(2,3,4,5,6)から次を提案
     const used = rlConfig.map(r => r.size);
     const next = [2, 3, 4, 5, 6].find(n => !used.includes(n)) || 2;
     rlConfig.push({ size: next, count: 1 });
     renderRouletteConfig();
   });
   $("#rl-go").addEventListener("click", runRoulette);
+  $("#rl-clear").addEventListener("click", async () => {
+    if (!confirm("席替えの結果を消しますか?")) return;
+    try { await sb.from("roulette").delete().neq("id", "00000000-0000-0000-0000-000000000000"); } catch (e) {}
+    renderRouletteResult(null);
+    toast("結果を消しました");
+  });
   renderRouletteConfig();
+  applyRouletteHostView();
+  loadRoulette();
+}
+
+/* 主催者モードのON/OFFで設定パネルの表示を切り替える */
+function applyRouletteHostView() {
+  const host = $("#rl-host");
+  if (host) host.style.display = hostMode ? "block" : "none";
 }
 
 function setupTabs() {
@@ -1444,9 +1444,8 @@ function setupTabs() {
     // タブを開いたときに軽く更新
     if (b.dataset.page === "plaza") { loadSongs(); loadEvents(); }
     if (b.dataset.page === "feed") { loadPosts(); }
-    if (b.dataset.page === "play") { }
-    if (b.dataset.page === "me") { loadMembersAll(); refreshMyPoints(); loadConnections(); }
-    if (b.dataset.page === "play") { renderRouletteMembers(); }
+    if (b.dataset.page === "me") { loadMembersAll(); refreshMyPoints(); }
+    if (b.dataset.page === "play") { applyRouletteHostView(); if (hostMode) renderRouletteMembers(); loadRoulette(); }
     if (b.dataset.page === "connect") { loadProfiles(); }
   }));
 }
@@ -2079,9 +2078,44 @@ function celebrateBingo(order) {
   const ov = $("#connect-overlay");
   $("#ov-title").textContent = "ビンゴ!";
   $("#ov-names").textContent = me.name;
-  $("#ov-body").innerHTML = `<div class="ov-points">${order}番目</div><div style="font-size:14px">主催者に画面を見せて、景品を受け取ってください ✦</div>`;
-  const a = $("#ov-actions"); a.innerHTML = ""; addClose(a, "やった!");
+  $("#ov-body").innerHTML = `
+    <div class="ov-points">${order}番目</div>
+    <div style="font-size:14px">主催者に画面を見せて、景品を受け取ってください ✦</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:14px">この瞬間を、記念に一枚。<br>撮った写真は「みんな」に投稿されます。</div>
+    <input type="file" id="bingo-photo-input" accept="image/*" capture="user" style="display:none">`;
+  const a = $("#ov-actions"); a.innerHTML = "";
+  const photoBtn = document.createElement("button");
+  photoBtn.className = "btn"; photoBtn.textContent = "📸 記念写真を撮る";
+  photoBtn.addEventListener("click", () => $("#bingo-photo-input").click());
+  a.appendChild(photoBtn);
+  addClose(a, "とじる");
   ov.classList.add("active");
+
+  const input = $("#bingo-photo-input");
+  input.addEventListener("change", async (e) => {
+    const f = (e.target.files && e.target.files[0]) || null;
+    e.target.value = "";
+    if (!f) return;
+    photoBtn.disabled = true;
+    photoBtn.textContent = "投稿中…";
+    try {
+      const blob = await cropToSquareJpeg(f, 800, 0.85);
+      const photo_path = `bingo_${me.id}_${Date.now()}.jpg`;
+      const { error: upErr } = await sb.storage.from("photos").upload(photo_path, blob, { contentType: "image/jpeg" });
+      if (upErr) throw upErr;
+      await sb.from("posts").insert({
+        user_id: me.id,
+        body: `${order}番目でビンゴしました!おめでとう!🎉`,
+        photo_path,
+      });
+      toast("記念写真を「みんな」に投稿しました ✦");
+      ov.classList.remove("active");
+    } catch (err) {
+      photoBtn.disabled = false;
+      photoBtn.textContent = "📸 記念写真を撮る";
+      toast("投稿に失敗しました。通信環境を確認してください", 4000);
+    }
+  });
 }
 
 async function renderHostBingo() {
@@ -2571,6 +2605,7 @@ function setupHost() {
       document.body.classList.remove("is-host");
       $("#host-bingo").innerHTML = ""; $("#host-events").innerHTML = ""; $("#host-members").innerHTML = "";
       const pt2 = $("#btn-push-test"); if (pt2) pt2.style.display = "none";
+      applyRouletteHostView();
       loadSongs(); loadPosts();
       return toast("主催者モードを終了しました");
     }
@@ -2580,6 +2615,7 @@ function setupHost() {
     document.body.classList.add("is-host");
     renderHostBingo(); renderHostEvents(); renderHostMembers(); loadSongs(); loadPosts();
       const pt = $("#btn-push-test"); if (pt) pt.style.display = "inline-flex";
+      applyRouletteHostView(); renderRouletteMembers();
     toast("主催者モードON:あそぶ・ひろばに進行パネルが出ています");
   });
 }
@@ -2621,69 +2657,6 @@ async function renderHostMembers() {
     await Promise.all([loadMembersAll(), loadEvents()]);
     renderHostMembers();
   }));
-}
-async function loadConnections() {
-  if (!me) return;
-  const sumEl = $("#connect-summary"), peopleEl = $("#connect-people");
-  if (!sumEl || !peopleEl) return;
-  if (!allProfiles.length) await loadProfiles();
-
-  const { data: conns } = await sb.from("connections")
-    .select("scanner_id,scanned_id,created_at")
-    .or(`scanner_id.eq.${me.id},scanned_id.eq.${me.id}`);
-  const { data: given } = await sb.from("notes").select("to_id").eq("from_id", me.id);
-  const { data: received } = await sb.from("notes").select("from_id").eq("to_id", me.id);
-
-  const rows = conns || [];
-  const perPerson = {};
-  rows.forEach(r => {
-    const other = r.scanner_id === me.id ? r.scanned_id : r.scanner_id;
-    if (other === me.id) return;
-    if (!perPerson[other]) perPerson[other] = { meets: 0, lastAt: null };
-    perPerson[other].meets++;
-    if (!perPerson[other].lastAt || r.created_at > perPerson[other].lastAt) perPerson[other].lastAt = r.created_at;
-  });
-  const givenCount = {}, recvCount = {};
-  (given || []).forEach(n => { if (n.to_id) givenCount[n.to_id] = (givenCount[n.to_id] || 0) + 1; });
-  (received || []).forEach(n => { if (n.from_id) recvCount[n.from_id] = (recvCount[n.from_id] || 0) + 1; });
-
-  const totalPeople = new Set([
-    ...Object.keys(perPerson), ...Object.keys(givenCount), ...Object.keys(recvCount),
-  ]).size;
-  const totalMeets = rows.length;
-  const totalWords = (given || []).length + (received || []).length;
-
-  sumEl.innerHTML = `
-    <div class="cs-stat"><div class="cs-num">${totalPeople}</div><div class="cs-lbl">出会った人</div></div>
-    <div class="cs-stat"><div class="cs-num">${totalMeets}</div><div class="cs-lbl">交わした回数</div></div>
-    <div class="cs-stat"><div class="cs-num">${totalWords}</div><div class="cs-lbl">ことばの往復</div></div>`;
-
-  const ids = Object.keys(perPerson).sort((a, b) => {
-    if (perPerson[b].meets !== perPerson[a].meets) return perPerson[b].meets - perPerson[a].meets;
-    return (perPerson[b].lastAt || "").localeCompare(perPerson[a].lastAt || "");
-  });
-  if (!ids.length) {
-    peopleEl.innerHTML = `<p class="empty">まだ記録はありません。QRを交わすと、ここに刻まれていきます。</p>`;
-    return;
-  }
-  peopleEl.innerHTML = ids.map(id => {
-    const info = perPerson[id];
-    const g = givenCount[id] || 0, rc = recvCount[id] || 0;
-    const wordBits = [];
-    if (g) wordBits.push(`贈った ${g}`);
-    if (rc) wordBits.push(`もらった ${rc}`);
-    return `
-      <div class="cp-item" data-uid="${id}">
-        ${avatarHtml(avatarOf(id), 42)}
-        <div class="cp-body">
-          <div class="cp-name">${esc(nameOf(id))}さん</div>
-          <div class="cp-meta">最後に会ったのは ${info.lastAt ? fmtDate(info.lastAt) : "―"}${wordBits.length ? " ・ ことば " + wordBits.join(" / ") : ""}</div>
-        </div>
-        <div class="cp-count">${info.meets}<small>回</small></div>
-      </div>`;
-  }).join("");
-  peopleEl.querySelectorAll(".cp-item").forEach(it =>
-    it.addEventListener("click", () => showProfile(it.dataset.uid)));
 }
 
 async function loadMembersAll() {
@@ -2738,6 +2711,10 @@ function subscribeRealtime() {
         await loadNotes();
         await refreshMyPoints();
       })
+    .subscribe();
+
+  sb.channel("roulette-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: "roulette" }, () => loadRoulette())
     .subscribe();
 
   sb.channel("bingo-live")
