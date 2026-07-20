@@ -387,6 +387,13 @@ input:focus,textarea:focus,select:focus{border-color:var(--gold)}
 .note-body{font-size:15px;white-space:pre-wrap}
 .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:24px 0}
 
+/* ---------- me compact profile ---------- */
+.me-compact{display:flex;align-items:center;gap:13px}
+.me-compact-body{flex:1;min-width:0}
+.me-compact-name{font-size:16px;color:var(--cream)}
+.me-compact-bio{font-size:12.5px;color:var(--muted);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---------- me ---------- */
 .me-points{font-family:"Shippori Mincho",serif;font-size:52px;color:var(--gold-bright);line-height:1.2}
 .me-title-badge{
@@ -660,22 +667,38 @@ body.is-host .host-badge{display:block}
       <div class="progress-label" id="me-next"></div>
     </div>
     <div class="card">
-      <div class="section-h">プロフィール</div>
-      <div class="avatar-edit">
-        <div id="avatar-preview" class="avatar-ph" style="font-size:32px">?</div>
-        <button class="btn ghost small" id="btn-avatar">アイコン写真を選ぶ</button>
-        <input type="file" id="avatar-input" accept="image/*" style="display:none">
+      <!-- ふだんはコンパクト表示 -->
+      <div class="me-compact" id="me-compact">
+        <div id="me-avatar-mini" class="avatar-ph" style="width:52px;height:52px;font-size:20px;flex:none">?</div>
+        <div class="me-compact-body">
+          <div class="me-compact-name" id="me-compact-name">—</div>
+          <div class="me-compact-bio" id="me-compact-bio"></div>
+        </div>
+        <button class="btn ghost small" id="btn-edit-me" style="flex:none">修正する</button>
       </div>
-      <div class="field-label">名前</div>
-      <input id="me-name" type="text" maxlength="20">
-      <div class="field-label">ひとこと</div>
-      <input id="me-bio" type="text" maxlength="60">
-      <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
-      <div class="tag-picker" id="me-tagpick"></div>
-      <input id="me-tags" type="text" maxlength="120" placeholder="その他があれば自由に(読点区切り)" style="margin-top:10px">
-      <div class="field-label">自己紹介</div>
-      <textarea id="me-intro" rows="3" maxlength="300" placeholder="出身、仕事、最近ハマっていることなど自由に"></textarea>
-      <div style="margin-top:14px"><button class="btn small" id="btn-save-me">保存する</button></div>
+
+      <!-- 「修正する」で開く編集フォーム -->
+      <div id="me-edit" style="display:none">
+        <div class="section-h" style="margin-top:4px">プロフィールを修正</div>
+        <div class="avatar-edit">
+          <div id="avatar-preview" class="avatar-ph" style="font-size:32px">?</div>
+          <button class="btn ghost small" id="btn-avatar">アイコン写真を選ぶ</button>
+          <input type="file" id="avatar-input" accept="image/*" style="display:none">
+        </div>
+        <div class="field-label">名前</div>
+        <input id="me-name" type="text" maxlength="20">
+        <div class="field-label">ひとこと</div>
+        <input id="me-bio" type="text" maxlength="60">
+        <div class="field-label">好きなこと・興味(タップで選択・いくつでも)</div>
+        <div class="tag-picker" id="me-tagpick"></div>
+        <input id="me-tags" type="text" maxlength="120" placeholder="その他があれば自由に(読点区切り)" style="margin-top:10px">
+        <div class="field-label">自己紹介</div>
+        <textarea id="me-intro" rows="3" maxlength="300" placeholder="出身、仕事、最近ハマっていることなど自由に"></textarea>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn small" id="btn-save-me">保存する</button>
+          <button class="btn ghost small" id="btn-cancel-me">とじる</button>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="section-h">お知らせ通知</div>
@@ -2561,6 +2584,15 @@ function renderMe() {
   buildTagPicker("me-tagpick", curTags);
   $("#me-tags").value = curTags.filter(t => !INTEREST_TAGS.includes(t)).join("、");
   $("#me-intro").value = me.intro || "";
+  // コンパクト表示
+  $("#me-compact-name").textContent = me.name || "—";
+  const cbio = $("#me-compact-bio");
+  cbio.textContent = me.bio || "ひとことを書くと、あなたらしさが伝わります";
+  cbio.style.opacity = me.bio ? "1" : ".6";
+  const mini = $("#me-avatar-mini");
+  if (mini) mini.outerHTML = me.avatar_path
+    ? `<img id="me-avatar-mini" class="avatar" src="${photoUrl(me.avatar_path)}" style="width:52px;height:52px;flex:none" alt="me">`
+    : `<div id="me-avatar-mini" class="avatar-ph" style="width:52px;height:52px;font-size:20px;flex:none">${esc((me.name||"?").charAt(0))}</div>`;
   const { cur, next } = titleFor(me.points);
   const myGen = genLabel(me.id);
   $("#me-title").textContent = `${cur[2] || "✦"} ${cur[1]}${myGen ? " ・ " + myGen : ""}`;
@@ -2575,6 +2607,13 @@ function renderMe() {
   }
 }
 function setupMe() {
+  const openEdit = (on) => {
+    $("#me-edit").style.display = on ? "block" : "none";
+    $("#me-compact").style.display = on ? "none" : "flex";
+  };
+  $("#btn-edit-me").addEventListener("click", () => openEdit(true));
+  $("#btn-cancel-me").addEventListener("click", () => { renderMe(); openEdit(false); });
+
   $("#btn-save-me").addEventListener("click", async () => {
     const name = $("#me-name").value.trim();
     if (!name) return toast("名前は必須です");
@@ -2595,6 +2634,8 @@ function setupMe() {
     me.name = name; me.bio = bio; me.tags = tags; me.intro = intro; me.avatar_path = avatar_path;
     avatarFile = null;
     renderMyQR(); await loadProfiles();
+    renderMe();
+    openEdit(false);
     toast("保存しました ✦");
   });
 }
